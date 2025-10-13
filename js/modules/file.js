@@ -112,10 +112,10 @@ export async function exportStandaloneHTML() {
 
     const [d3Content, dagreContent, cssContent, diagramJsContent] =
       await Promise.all([
-        fetch("/libs/d3v7.js").then((res) => res.text()),
-        fetch("/libs/dagre.js").then((res) => res.text()),
-        fetch("/style.css").then((res) => res.text()),
-        fetch("/js/modules/diagram.js").then((res) => res.text()),
+        fetch("libs/d3v7.js").then((res) => res.text()),
+        fetch("libs/dagre.js").then((res) => res.text()),
+        fetch("style.css").then((res) => res.text()),
+        fetch("js/modules/diagram.js").then((res) => res.text()),
       ]);
 
     const htmlContent = createStandaloneHTML(
