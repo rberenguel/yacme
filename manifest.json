@@ -23,7 +23,7 @@
     {
       "action": "./index.html",
       "accept": {
-        "text/cmap": [".cmap"],
+        "text/plain": [".cmap"],
         "text/markdown": [".md"]
       }
     }
