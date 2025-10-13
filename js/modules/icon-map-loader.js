@@ -6,7 +6,7 @@
  * @param {string} url - The path to the Iconoir font CSS file.
  * @returns {Promise<Object>} A promise that resolves to the icon map.
  */
-export async function loadIconMap(url = "/fonts/iconoir/iconoir-font.css") {
+export async function loadIconMap(url = "fonts/iconoir/iconoir-font.css") {
   const iconMap = {};
   try {
     const response = await fetch(url);
