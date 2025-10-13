@@ -11,6 +11,10 @@ import {
   markdownLanguage,
   GFM,
 } from "CodeMirrorBundle";
+import { set, get } from "../libs/idb-keyval.js";
+
+let fileHandle = null;
+
 
 const compactDiagramData = `
 Welcome Welcome to the Live Editor!
@@ -29,14 +33,12 @@ A -> B relates to ; labelStyle="fill: green;"
 
 function parseDirectives(directiveString) {
   const directives = {};
-  console.log(directiveString);
   if (!directiveString) return directives;
   const regex = /(\w+)\s*=\s*"([^"]*)"/g;
   let match;
   while ((match = regex.exec(directiveString)) !== null) {
     directives[match[1]] = match[2];
   }
-  console.log(directives);
   return directives;
 }
 
@@ -421,52 +423,104 @@ editorView = new EditorView({
   parent: editorPane,
 });
 
-async function saveFile(content) {
-  if (navigator.share) {
-    try {
-      const file = new File([content], "diagram.txt", { type: "text/plain" });
-      await navigator.share({ files: [file] });
-    } catch (err) {
-      if (err.name !== "AbortError") console.error("Share API failed:", err);
-    }
+async function openFile() {
+  [fileHandle] = await window.showOpenFilePicker({
+    types: [
+      {
+        description: "Concept Maps",
+        accept: {
+          "text/cmap": [".cmap"],
+          "text/markdown": [".md"],
+        },
+      },
+    ],
+  });
+  const file = await fileHandle.getFile();
+  const contents = await file.text();
+  editorView.dispatch({
+    changes: {
+      from: 0,
+      to: editorView.state.doc.length,
+      insert: contents,
+    },
+  });
+  set("lastFile", fileHandle);
+}
+
+async function saveFile() {
+  if (fileHandle) {
+    const writable = await fileHandle.createWritable();
+    await writable.write(editorView.state.doc.toString());
+    await writable.close();
   } else {
-    const a = document.createElement("a");
-    a.href = "data:text/plain;charset=utf-8," + encodeURIComponent(content);
-    a.download = "diagram.txt";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    saveFileAs();
   }
 }
-function openFile() {
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = ".txt,.md,text/plain";
-  input.onchange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (re) =>
-      editorView.dispatch({
-        changes: {
-          from: 0,
-          to: editorView.state.doc.length,
-          insert: re.target.result,
+
+async function saveFileAs() {
+  fileHandle = await window.showSaveFilePicker({
+    types: [
+      {
+        description: "Concept Maps",
+        accept: {
+          "text/cmap": [".cmap"],
+          "text/markdown": [".md"],
         },
-      });
-    reader.readAsText(file);
-  };
-  input.click();
+      },
+    ],
+  });
+  set("lastFile", fileHandle);
+  const writable = await fileHandle.createWritable();
+  await writable.write(editorView.state.doc.toString());
+  await writable.close();
 }
+
+async function openLastFile() {
+  get("lastFile").then(async (lastFile) => {
+    if (lastFile) {
+      if ((await lastFile.queryPermission({ mode: "readwrite" })) === "granted") {
+        fileHandle = lastFile;
+        const file = await fileHandle.getFile();
+        const contents = await file.text();
+        editorView.dispatch({
+          changes: {
+            from: 0,
+            to: editorView.state.doc.length,
+            insert: contents,
+          },
+        });
+      }
+    }
+  });
+}
+
 window.addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === "s") {
     e.preventDefault();
-    saveFile(editorView.state.doc.toString());
+    saveFile();
+  }
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "s") {
+    e.preventDefault();
+    saveFileAs();
   }
   if ((e.metaKey || e.ctrlKey) && e.key === "o") {
     e.preventDefault();
     openFile();
   }
+  if ((e.metaKey || e.ctrlKey) && e.key === "n") {
+    e.preventDefault();
+    editorView.dispatch({
+      changes: {
+        from: 0,
+        to: editorView.state.doc.length,
+        insert: "",
+      },
+    });
+    fileHandle = null;
+    set("lastFile", null);
+  }
 });
 
 updateDiagram(parseCompactFormat(compactDiagramData));
+openLastFile();
+
