@@ -3,3 +3,5 @@
 Following the trails of [Garbuix](https://github.com/rberenguel/garbuix) and others I have written before.
 
 Still WIP.
+
+There is some drag-on-nodes weird bug.

@@ -1,12 +1,25 @@
 const svg = d3.select("#diagram-container");
 const svgElement = document.querySelector(".diagram-pane");
-const width = svgElement.clientWidth;
-const height = svgElement.clientHeight;
+let width = svgElement.clientWidth;
+let height = svgElement.clientHeight;
 const zoomGroup = svg.select("#zoom-group");
 const linksGroup = zoomGroup.select("#links");
 const nodesGroup = zoomGroup.select("#nodes");
 let nodes = [];
 let links = [];
+
+export function getDiagramData() {
+  // Deep copy to preserve the exact state at the time of export
+  return JSON.parse(JSON.stringify({ nodes, links }));
+}
+
+export function resizeDiagram() {
+  width = svgElement.clientWidth;
+  height = svgElement.clientHeight;
+  simulation.force("center", d3.forceCenter(width / 2, height / 2));
+  // Give the simulation a little push to adjust to the new center
+  simulation.alpha(0.1).restart();
+}
 
 const simulation = d3
   .forceSimulation()
@@ -123,7 +136,7 @@ function ticked() {
 
 function drag(simulation) {
   function dragstarted(event, d) {
-    if (!event.active) simulation.alphaTarget(0.3).restart();
+    if (!event.active) simulation.alphaTarget(0.1).restart();
     d.fx = d.x;
     d.fy = d.y;
     d3.select(this).classed("grabbing", true);
@@ -167,15 +180,15 @@ export function updateDiagram(newData) {
       });
     }
   });
-
+  console.log(nodes, links);
   const g = new dagre.graphlib.Graph();
   g.setGraph({ rankdir: "TB", marginx: 20, marginy: 20 });
   g.setDefaultEdgeLabel(() => ({}));
   nodes.forEach((node) =>
-      g.setNode(node.id, { label: node.id, width: 150, height: 50 }),
+    g.setNode(node.id, { label: node.id, width: 150, height: 50 }),
   );
   links.forEach((link) =>
-      g.setEdge(link.source.id || link.source, link.target.id || link.target),
+    g.setEdge(link.source.id || link.source, link.target.id || link.target),
   );
   dagre.layout(g);
 
@@ -223,7 +236,7 @@ export function updateDiagram(newData) {
 
   linksGroup
     .selectAll("path.link")
-    .data(links, (d) => `${d.source.id}-${d.target.id}`)
+    .data(links, (d) => `${d.source.id || d.source}-${d.target.id || d.target}`)
     .join("path")
     .attr("class", (d) => `link ${d.directives?.nodeClass || ""}`)
     .attr("style", (d) => d.directives?.nodeStyle || null)
@@ -231,7 +244,7 @@ export function updateDiagram(newData) {
 
   linksGroup
     .selectAll("text.link-label")
-    .data(links, (d) => `${d.source.id}-${d.target.id}`)
+    .data(links, (d) => `${d.source.id || d.source}-${d.target.id || d.target}`)
     .join("text")
     .attr("class", (d) => `link-label ${d.directives?.labelClass || ""}`)
     .attr("style", (d) => d.directives?.labelStyle || null)
