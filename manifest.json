@@ -1,0 +1,30 @@
+{
+  "short_name": "YACME",
+  "version": "0.0.1",
+  "name": "YACME",
+  "description": "Yet another concept map editor",
+  "icons": [
+    {
+      "src": "media/icon512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "media/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#002b36",
+  "theme_color": "#000",
+  "file_handlers": [
+    {
+      "action": "./index.html",
+      "accept": {
+        "text/plain": [".cmap"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Yet Another Concept Map Editor</title>
+    <link rel="stylesheet" href="styles/codemirror.css" />
+    <link rel="stylesheet" href="style.css" />
+
+    <script type="importmap">
+      {
+        "imports": {
+          "CodeMirrorBundle": "./bundles/codemirror-bundle.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div id="editor-pane" class="editor-pane"></div>
+      <div class="diagram-pane">
+        <svg id="diagram-container">
+          <defs>
+            <marker
+              id="arrowhead"
+              viewBox="0 -5 10 10"
+              refX="10"
+              refY="0"
+              markerWidth="6"
+              markerHeight="6"
+              orient="auto"
+            >
+              <path d="M0,-5L10,0L0,5" fill="#cb4b16"></path>
+            </marker>
+          </defs>
+          <g id="zoom-group">
+            <g id="links"></g>
+            <g id="nodes"></g>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+    <script type="module" src="script.js"></script>
+  </body>
+</html>
