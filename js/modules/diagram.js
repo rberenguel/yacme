@@ -1,3 +1,5 @@
+// js/modules/diagram.js
+
 const svg = d3.select("#diagram-container");
 const svgElement = document.querySelector(".diagram-pane");
 let width = svgElement.clientWidth;
@@ -7,9 +9,71 @@ const linksGroup = zoomGroup.select("#links");
 const nodesGroup = zoomGroup.select("#nodes");
 let nodes = [];
 let links = [];
+let iconMap = {}; // This will hold the map loaded by main.js
+
+/**
+ * Receives the dynamically loaded icon map.
+ * @param {Object} map - The icon name to character map.
+ */
+export function setIconMap(map) {
+  iconMap = map;
+}
+
+/**
+ * Renders a label, handling multiline text and icon replacement.
+ * This version robustly centers text and solves the placement regression.
+ * @param {d3.Selection} textElement - The D3 selection of the <text> element.
+ * @param {string} labelText - The text content of the label.
+ */
+function renderLabel(textElement, labelText, edge = false) {
+  textElement.selectAll("*").remove();
+  // This is the critical fix for the label placement regression.
+  textElement.attr("text-anchor", "middle");
+
+  const label = (labelText || "").replace(/\\n/g, "\n");
+  const lines = label.split("\n");
+  const lineHeight = 1.2;
+  const initial_dy = -((lines.length - 1) * lineHeight) / 2;
+
+  lines.forEach((line, i) => {
+    const lineTspan = textElement
+      .append("tspan")
+      .attr("x", edge ? undefined : 0)
+      .attr("dy", i === 0 ? `${initial_dy}em` : `${lineHeight}em`);
+
+    const iconRegex = /:([a-zA-Z0-9\-]+):/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = iconRegex.exec(line)) !== null) {
+      if (match.index > lastIndex) {
+        lineTspan.append(() =>
+          document.createTextNode(line.substring(lastIndex, match.index)),
+        );
+      }
+      const iconName = match[1];
+      const iconChar = iconMap[iconName];
+      if (iconChar) {
+        lineTspan
+          .append("tspan")
+          .style("font-family", "iconoir") // Apply the icon font directly
+          .attr("class", "iconoired")
+          .text(iconChar);
+      } else {
+        // Fallback for unknown icons
+        lineTspan.append(() => document.createTextNode(match[0]));
+      }
+      lastIndex = iconRegex.lastIndex;
+    }
+    if (lastIndex < line.length) {
+      lineTspan.append(() =>
+        document.createTextNode(line.substring(lastIndex)),
+      );
+    }
+  });
+}
 
 export function getDiagramData() {
-  // Deep copy to preserve the exact state at the time of export
   return JSON.parse(JSON.stringify({ nodes, links }));
 }
 
@@ -17,7 +81,6 @@ export function resizeDiagram() {
   width = svgElement.clientWidth;
   height = svgElement.clientHeight;
   simulation.force("center", d3.forceCenter(width / 2, height / 2));
-  // Give the simulation a little push to adjust to the new center
   simulation.alpha(0.1).restart();
 }
 
@@ -34,8 +97,8 @@ const simulation = d3
   .force("charge", d3.forceManyBody().strength(-1000))
   .force("collide", d3.forceCollide())
   .force("center", d3.forceCenter(width / 2, height / 2))
-  .velocityDecay(0.5) // Settle faster
-  .alphaDecay(0.05) // Cool faster
+  .velocityDecay(0.5)
+  .alphaDecay(0.05)
   .on("tick", ticked);
 
 function updateDiagramAppearance() {
@@ -67,19 +130,7 @@ function updateDiagramAppearance() {
     .attr("style", (d) => d.directives?.labelStyle || null)
     .attr("y", (d) => (d.expanded ? -d.height / 2 + 20 : 0))
     .each(function (d) {
-      const text = d3.select(this);
-      text.selectAll("tspan").remove();
-      const label = (d.title || d.id).replace(/\\n/g, "\n");
-      const lines = label.split("\n");
-      const lineHeight = 1.2;
-      const initial_dy = -((lines.length - 1) * lineHeight) / 2;
-      lines.forEach((line, i) => {
-        text
-          .append("tspan")
-          .attr("x", 0)
-          .attr("dy", i === 0 ? `${initial_dy}em` : `${lineHeight}em`)
-          .text(line);
-      });
+      renderLabel(d3.select(this), d.title || d.id);
     });
 
   nodeSelection.selectAll("foreignObject").remove();
@@ -125,10 +176,14 @@ function ticked() {
     const targetPoint = getBorderPoint(d.source, d.target);
     return `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
   });
+
+  // The text-anchor attribute set in renderLabel now correctly centers
+  // the text on these coordinates.
   linksGroup
     .selectAll("text.link-label")
     .attr("x", (d) => (d.source.x + d.target.x) / 2)
     .attr("y", (d) => (d.source.y + d.target.y) / 2);
+
   nodesGroup
     .selectAll("g.node")
     .attr("transform", (d) => `translate(${d.x}, ${d.y})`);
@@ -180,7 +235,6 @@ export function updateDiagram(newData) {
       });
     }
   });
-  console.log(nodes, links);
   const g = new dagre.graphlib.Graph();
   g.setGraph({ rankdir: "TB", marginx: 20, marginy: 20 });
   g.setDefaultEdgeLabel(() => ({}));
@@ -231,7 +285,9 @@ export function updateDiagram(newData) {
   nodeSelection.attr(
     "class",
     (d) =>
-      `node ${d.prose ? "prose-node" : ""} ${d.expanded ? "expanded-node" : ""} ${d.directives?.nodeClass || ""}`,
+      `node ${d.prose ? "prose-node" : ""} ${
+        d.expanded ? "expanded-node" : ""
+      } ${d.directives?.nodeClass || ""}`,
   );
 
   linksGroup
@@ -248,7 +304,9 @@ export function updateDiagram(newData) {
     .join("text")
     .attr("class", (d) => `link-label ${d.directives?.labelClass || ""}`)
     .attr("style", (d) => d.directives?.labelStyle || null)
-    .text((d) => d.verb);
+    .each(function (d) {
+      renderLabel(d3.select(this), d.verb, /*edge=*/ true);
+    });
 
   updateDiagramAppearance();
 
@@ -258,13 +316,12 @@ export function updateDiagram(newData) {
   simulation.force("link").links(links);
   simulation.force("collide").radius((d) => d.width / 2 + 20);
 
-  // Only "reheat" the simulation if nodes or links were added/removed.
   if (
     nodes.length !== oldNodeCount ||
     links.length !== simulation.force("link").links().length
   ) {
     simulation.alpha(0.8).restart();
   } else {
-    ticked(); // Manually redraw elements if simulation is not restarted
+    ticked();
   }
 }

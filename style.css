@@ -42,6 +42,10 @@ svg {
   width: 100%;
   height: 100%;
 }
+.iconoired {
+  font-size: 150%;
+  fill: #2aa198;
+}
 .node {
   cursor: grab;
 }

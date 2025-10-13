@@ -1,5 +1,7 @@
+// js/main.js
+
 import { parseCompactFormat } from "./modules/parser.js";
-import { updateDiagram } from "./modules/diagram.js";
+import { updateDiagram, setIconMap } from "./modules/diagram.js";
 import { setupEditor } from "./modules/editor.js";
 import {
   openFile,
@@ -10,10 +12,18 @@ import {
   exportStandaloneHTML,
 } from "./modules/file.js";
 import { compactDiagramData } from "./modules/initial-data.js";
+import { loadIconMap } from "./modules/icon-map-loader.js";
 
-setupEditor(compactDiagramData);
-updateDiagram(parseCompactFormat(compactDiagramData));
-openLastFile();
+async function initializeApp() {
+  const iconMap = await loadIconMap();
+  setIconMap(iconMap); // Pass the dynamically loaded map to the diagram module
+
+  setupEditor(compactDiagramData);
+  updateDiagram(parseCompactFormat(compactDiagramData));
+  openLastFile();
+}
+
+initializeApp();
 
 window.addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === "s") {
@@ -32,7 +42,7 @@ window.addEventListener("keydown", (e) => {
     e.preventDefault();
     newFile();
   }
-  if ((e.metaKey || e.ctrlKey) && e.key === "e") {
+  if (e.metaKey && !e.ctrlKey && e.key === "e") {
     e.preventDefault();
     exportStandaloneHTML();
   }
@@ -63,7 +73,6 @@ function handleMouseUp() {
 resizer.addEventListener("mousedown", handleMouseDown);
 
 // --- Diagram Resize Observer ---
-// This will automatically update the D3 canvas when the pane is resized
 const diagramPane = document.querySelector(".diagram-pane");
 const observer = new ResizeObserver(() => {
   resizeDiagram();
