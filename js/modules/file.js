@@ -6,11 +6,9 @@ import { createStandaloneHTML } from "./html-exporter.js";
 let fileHandle = null;
 let currentFileName = "concept-map.cmap";
 
-// Helper to save the current editor content to IndexedDB for session persistence
 async function saveContentToLocal() {
   const editorView = getEditorView();
   await set("lastFileContent", editorView.state.doc.toString());
-  console.log("Session saved locally.");
 }
 
 export async function openFile() {
@@ -39,17 +37,15 @@ export async function openFile() {
       console.error("File open cancelled or failed.", err);
     }
   } else {
-    // Fallback for iOS: allow any file to be selected.
     const input = document.createElement("input");
     input.type = "file";
-    // By not setting input.accept, we allow any file type.
     input.onchange = async (event) => {
       const file = event.target.files[0];
       if (!file) return;
 
       const contents = await file.text();
       currentFileName = file.name;
-      fileHandle = null; 
+      fileHandle = null;
 
       editorView.dispatch({
         changes: { from: 0, to: editorView.state.doc.length, insert: contents },
@@ -64,9 +60,9 @@ export async function openFile() {
 
 export async function saveFile() {
   await saveContentToLocal();
-  const editorView = getEditorView();
-
+  
   if (fileHandle && (await fileHandle.queryPermission({ mode: "readwrite" })) === "granted") {
+    const editorView = getEditorView();
     const writable = await fileHandle.createWritable();
     await writable.write(editorView.state.doc.toString());
     await writable.close();
@@ -98,18 +94,20 @@ export async function saveFileAs() {
       console.error("Save As cancelled or failed.", err);
     }
   } else {
-    // Fallback for iOS: trigger a download, ensuring .cmap extension.
-    const blob = new Blob([editorView.state.doc.toString()], { type: "text/plain" });
+    // **THE FIX FOR IOS SAVING**
+    // Use 'application/octet-stream' to force a raw download and prevent iOS
+    // from appending its own extension (like .txt).
+    const blob = new Blob([editorView.state.doc.toString()], { type: "application/octet-stream" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    
-    // Ensure the filename ends with .cmap
-    let downloadName = currentFileName.split('.').slice(0, -1).join('.') || currentFileName;
-    if (!downloadName.endsWith('.cmap')) {
-        downloadName += '.cmap';
-    }
 
-    a.download = downloadName;
+    // Robustly set the filename, removing any prior extension.
+    let baseName = currentFileName;
+    if (baseName.includes('.')) {
+        baseName = baseName.substring(0, baseName.lastIndexOf('.'));
+    }
+    a.download = `${baseName}.cmap`;
+
     a.click();
     URL.revokeObjectURL(a.href);
   }
