@@ -13,7 +13,7 @@ export async function openFile() {
         {
           description: "Concept Maps",
           accept: {
-            "text/cmap": [".cmap"],
+            "text/plain": [".cmap"],
             "text/markdown": [".md"],
           },
         },
@@ -32,7 +32,6 @@ export async function openFile() {
   } else {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".cmap,.md";
     input.onchange = async (event) => {
       const file = event.target.files[0];
       if (!file) return;
@@ -69,7 +68,7 @@ export async function saveFileAs() {
         {
           description: "Concept Maps",
           accept: {
-            "text/cmap": [".cmap"],
+            "text/plain": [".cmap"],
             "text/markdown": [".md"],
           },
         },
