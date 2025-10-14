@@ -39,18 +39,17 @@ export async function openFile() {
       console.error("File open cancelled or failed.", err);
     }
   } else {
-    // Fallback for iOS and other unsupported browsers
+    // Fallback for iOS: allow any file to be selected.
     const input = document.createElement("input");
     input.type = "file";
-    // Hint to iOS what file types we are interested in.
-    input.accept = ".cmap,text/plain";
+    // By not setting input.accept, we allow any file type.
     input.onchange = async (event) => {
       const file = event.target.files[0];
       if (!file) return;
 
       const contents = await file.text();
       currentFileName = file.name;
-      fileHandle = null; // Reset fileHandle for non-picker APIs
+      fileHandle = null; 
 
       editorView.dispatch({
         changes: { from: 0, to: editorView.state.doc.length, insert: contents },
@@ -64,17 +63,14 @@ export async function openFile() {
 }
 
 export async function saveFile() {
-  // Always save the current state to IndexedDB for session persistence
   await saveContentToLocal();
   const editorView = getEditorView();
 
-  // Use File System Access API if handle exists and permissions are granted
   if (fileHandle && (await fileHandle.queryPermission({ mode: "readwrite" })) === "granted") {
     const writable = await fileHandle.createWritable();
     await writable.write(editorView.state.doc.toString());
     await writable.close();
   } else {
-    // Otherwise, fall back to the download method
     saveFileAs();
   }
 }
@@ -102,11 +98,18 @@ export async function saveFileAs() {
       console.error("Save As cancelled or failed.", err);
     }
   } else {
-    // Fallback for iOS: trigger a download
+    // Fallback for iOS: trigger a download, ensuring .cmap extension.
     const blob = new Blob([editorView.state.doc.toString()], { type: "text/plain" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = currentFileName;
+    
+    // Ensure the filename ends with .cmap
+    let downloadName = currentFileName.split('.').slice(0, -1).join('.') || currentFileName;
+    if (!downloadName.endsWith('.cmap')) {
+        downloadName += '.cmap';
+    }
+
+    a.download = downloadName;
     a.click();
     URL.revokeObjectURL(a.href);
   }
@@ -114,7 +117,6 @@ export async function saveFileAs() {
 
 export async function openLastFile() {
   const editorView = getEditorView();
-  // On any browser, try to load the last content from IndexedDB.
   const lastContent = await get("lastFileContent");
   if (lastContent) {
     editorView.dispatch({
@@ -123,7 +125,6 @@ export async function openLastFile() {
     currentFileName = (await get("lastFileName")) || "concept-map.cmap";
   }
   
-  // For browsers with File System Access API, try to re-acquire the handle
   if (window.showOpenFilePicker) {
     const lastFileHandle = await get("lastFile");
     if (lastFileHandle && (await lastFileHandle.queryPermission({ mode: "readwrite" })) === "granted") {
@@ -139,7 +140,6 @@ export function newFile() {
   });
   fileHandle = null;
   currentFileName = "concept-map.cmap";
-  // Clear the session state
   set("lastFile", null);
   set("lastFileContent", "");
   set("lastFileName", null);
