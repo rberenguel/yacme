@@ -8,17 +8,7 @@ let fileHandle = null;
 export async function openFile() {
   if (window.showOpenFilePicker) {
     const editorView = getEditorView();
-    [fileHandle] = await window.showOpenFilePicker({
-      types: [
-        {
-          description: "Concept Maps",
-          accept: {
-            "text/plain": [".cmap"],
-            "text/markdown": [".md"],
-          },
-        },
-      ],
-    });
+    [fileHandle] = await window.showOpenFilePicker();
     const file = await fileHandle.getFile();
     const contents = await file.text();
     editorView.dispatch({
@@ -63,17 +53,7 @@ export async function saveFile() {
 export async function saveFileAs() {
   const editorView = getEditorView();
   if (window.showSaveFilePicker) {
-    fileHandle = await window.showSaveFilePicker({
-      types: [
-        {
-          description: "Concept Maps",
-          accept: {
-            "text/plain": [".cmap"],
-            "text/markdown": [".md"],
-          },
-        },
-      ],
-    });
+    fileHandle = await window.showSaveFilePicker();
     set("lastFile", fileHandle);
     const writable = await fileHandle.createWritable();
     await writable.write(editorView.state.doc.toString());
