@@ -6,28 +6,48 @@ import { createStandaloneHTML } from "./html-exporter.js";
 let fileHandle = null;
 
 export async function openFile() {
-  const editorView = getEditorView();
-  [fileHandle] = await window.showOpenFilePicker({
-    types: [
-      {
-        description: "Concept Maps",
-        accept: {
-          "text/cmap": [".cmap"],
-          "text/markdown": [".md"],
+  if (window.showOpenFilePicker) {
+    const editorView = getEditorView();
+    [fileHandle] = await window.showOpenFilePicker({
+      types: [
+        {
+          description: "Concept Maps",
+          accept: {
+            "text/cmap": [".cmap"],
+            "text/markdown": [".md"],
+          },
         },
+      ],
+    });
+    const file = await fileHandle.getFile();
+    const contents = await file.text();
+    editorView.dispatch({
+      changes: {
+        from: 0,
+        to: editorView.state.doc.length,
+        insert: contents,
       },
-    ],
-  });
-  const file = await fileHandle.getFile();
-  const contents = await file.text();
-  editorView.dispatch({
-    changes: {
-      from: 0,
-      to: editorView.state.doc.length,
-      insert: contents,
-    },
-  });
-  set("lastFile", fileHandle);
+    });
+    set("lastFile", fileHandle);
+  } else {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".cmap,.md";
+    input.onchange = async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      const contents = await file.text();
+      const editorView = getEditorView();
+      editorView.dispatch({
+        changes: {
+          from: 0,
+          to: editorView.state.doc.length,
+          insert: contents,
+        },
+      });
+    };
+    input.click();
+  }
 }
 
 export async function saveFile() {
@@ -43,24 +63,38 @@ export async function saveFile() {
 
 export async function saveFileAs() {
   const editorView = getEditorView();
-  fileHandle = await window.showSaveFilePicker({
-    types: [
-      {
-        description: "Concept Maps",
-        accept: {
-          "text/cmap": [".cmap"],
-          "text/markdown": [".md"],
+  if (window.showSaveFilePicker) {
+    fileHandle = await window.showSaveFilePicker({
+      types: [
+        {
+          description: "Concept Maps",
+          accept: {
+            "text/cmap": [".cmap"],
+            "text/markdown": [".md"],
+          },
         },
-      },
-    ],
-  });
-  set("lastFile", fileHandle);
-  const writable = await fileHandle.createWritable();
-  await writable.write(editorView.state.doc.toString());
-  await writable.close();
+      ],
+    });
+    set("lastFile", fileHandle);
+    const writable = await fileHandle.createWritable();
+    await writable.write(editorView.state.doc.toString());
+    await writable.close();
+  } else {
+    const blob = new Blob([editorView.state.doc.toString()], {
+      type: "text/plain",
+    });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "concept-map.cmap";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
 }
 
 export async function openLastFile() {
+  if (!window.showOpenFilePicker) {
+    return;
+  }
   get("lastFile").then(async (lastFile) => {
     if (lastFile) {
       if (
@@ -126,19 +160,30 @@ export async function exportStandaloneHTML() {
       cssContent,
     );
 
-    const handle = await window.showSaveFilePicker({
-      types: [
-        {
-          description: "HTML Files",
-          accept: { "text/html": [".html"] },
-        },
-      ],
-      suggestedName: "concept-map.html",
-    });
+    if (window.showSaveFilePicker) {
+      const handle = await window.showSaveFilePicker({
+        types: [
+          {
+            description: "HTML Files",
+            accept: { "text/html": [".html"] },
+          },
+        ],
+        suggestedName: "concept-map.html",
+      });
 
-    const writable = await handle.createWritable();
-    await writable.write(htmlContent);
-    await writable.close();
+      const writable = await handle.createWritable();
+      await writable.write(htmlContent);
+      await writable.close();
+    } else {
+      const blob = new Blob([htmlContent], {
+        type: "text/html",
+      });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "concept-map.html";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
   } catch (error) {
     console.error("Failed to export HTML:", error);
     // Optionally, inform the user that the export failed.
