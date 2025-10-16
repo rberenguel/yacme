@@ -229,7 +229,7 @@ function drag(simulation) {
 
 const zoom = d3
   .zoom()
-  .scaleExtent([0.2, 3])
+  .scaleExtent([0.001, 3])
   .on("zoom", ({ transform }) => zoomGroup.attr("transform", transform))
   .filter((event) => !event.target.closest(".prose-content"));
 svg.call(zoom).call(zoom.scaleTo, 0.8);
