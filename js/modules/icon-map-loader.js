@@ -27,6 +27,5 @@ export async function loadIconMap(url = "fonts/iconoir/iconoir-font.css") {
   } catch (error) {
     console.error("Could not load or parse icon map:", error);
   }
-  console.log(iconMap);
   return iconMap;
 }

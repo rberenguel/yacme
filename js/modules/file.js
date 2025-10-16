@@ -209,26 +209,48 @@ export async function exportStandaloneHTML() {
     );
 
     if (window.showSaveFilePicker) {
-      const handle = await window.showSaveFilePicker({
-        types: [
-          {
-            description: "HTML Files",
-            accept: { "text/html": [".html"] },
-          },
-        ],
-        suggestedName: "concept-map.html",
-      });
-      const writable = await handle.createWritable();
-      await writable.write(htmlContent);
-      await writable.close();
-    } else {
-      const blob = new Blob([htmlContent], { type: "text/html" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "concept-map.html";
-      a.click();
-      URL.revokeObjectURL(a.href);
+      try {
+        const handle = await window.showSaveFilePicker({
+          types: [
+            {
+              description: "HTML Files",
+              accept: { "text/html": [".html"] },
+            },
+          ],
+          suggestedName: "concept-map.html",
+        });
+        const writable = await handle.createWritable();
+        await writable.write(htmlContent);
+        await writable.close();
+        return;
+      } catch (err) {
+        console.error("HTML export save cancelled or failed", err);
+        return;
+      }
     }
+
+    const file = new File([new Blob([htmlContent], { type: "text/html" })], "concept-map.html", {
+        type: "text/html",
+    });
+    
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+            await navigator.share({
+            files: [file],
+            });
+            return;
+        } catch (err) {
+            console.error("Share failed:", err);
+        }
+    }
+
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "concept-map.html";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    
   } catch (error) {
     console.error("Failed to export HTML:", error);
   }

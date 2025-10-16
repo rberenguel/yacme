@@ -237,8 +237,7 @@ svg.call(zoom).call(zoom.scaleTo, 0.8);
 export function updateDiagram(newData) {
   const oldNodeMap = new Map(nodes.map((d) => [d.id, d]));
   nodes = newData.map((d) => Object.assign(oldNodeMap.get(d.id) || {}, d));
-  console.log(nodes);
-
+  
   links = [];
   newData.forEach((d) => {
     if (d.parentRelations) {
