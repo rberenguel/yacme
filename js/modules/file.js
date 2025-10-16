@@ -79,7 +79,9 @@ export async function saveFile() {
 export async function saveFileAs() {
   await saveContentToLocal();
   const editorView = getEditorView();
+  const content = editorView.state.doc.toString();
 
+  // First, try the File System Access API
   if (window.showSaveFilePicker) {
     try {
       fileHandle = await window.showSaveFilePicker({
@@ -93,34 +95,51 @@ export async function saveFileAs() {
       });
       currentFileName = fileHandle.name;
       const writable = await fileHandle.createWritable();
-      await writable.write(editorView.state.doc.toString());
+      await writable.write(content);
       await writable.close();
       await set("lastFile", fileHandle);
       await set("lastFileName", currentFileName);
+      return;
     } catch (err) {
       console.error("Save As cancelled or failed.", err);
+      // If the user cancels, we should not proceed.
+      return;
     }
-  } else {
-    // **THE FIX FOR IOS SAVING**
-    // Use 'application/octet-stream' to force a raw download and prevent iOS
-    // from appending its own extension (like .txt).
-    const blob = new Blob([editorView.state.doc.toString()], {
-      type: "application/octet-stream",
-    });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-
-    // Robustly set the filename, removing any prior extension.
-    let baseName = currentFileName;
-    if (baseName.includes(".")) {
-      baseName = baseName.substring(0, baseName.lastIndexOf("."));
-    }
-    a.download = `${baseName}.cmap`;
-
-    a.click();
-    URL.revokeObjectURL(a.href);
   }
+
+  const file = new File([new Blob([content], { type: "text/plain" })], currentFileName, {
+    type: "text/plain",
+  });
+  
+  // If that's not available, try the Web Share API
+  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+      });
+      return;
+    } catch (err) {
+      console.error("Share failed:", err);
+      // Fallback to blob download if sharing fails
+    }
+  }
+
+  // Finally, fall back to the blob download method
+  const blob = new Blob([content], {
+    type: "application/octet-stream",
+  });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  
+  let baseName = currentFileName;
+  if (baseName.includes(".")) {
+    baseName = baseName.substring(0, baseName.lastIndexOf("."));
+  }
+  a.download = `${baseName}.cmap`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
+
 
 export async function openLastFile() {
   const editorView = getEditorView();
