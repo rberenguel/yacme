@@ -17,10 +17,12 @@ export async function openFile() {
   if (window.showOpenFilePicker) {
     try {
       [fileHandle] = await window.showOpenFilePicker({
-        types: [{
-          description: 'Concept Maps',
-          accept: { 'text/plain': ['.cmap'] }
-        }],
+        types: [
+          {
+            description: "Concept Maps",
+            accept: { "text/plain": [".cmap"] },
+          },
+        ],
       });
       const file = await fileHandle.getFile();
       const contents = await file.text();
@@ -50,7 +52,7 @@ export async function openFile() {
       editorView.dispatch({
         changes: { from: 0, to: editorView.state.doc.length, insert: contents },
       });
-      
+
       await set("lastFileName", currentFileName);
       await saveContentToLocal();
     };
@@ -60,8 +62,11 @@ export async function openFile() {
 
 export async function saveFile() {
   await saveContentToLocal();
-  
-  if (fileHandle && (await fileHandle.queryPermission({ mode: "readwrite" })) === "granted") {
+
+  if (
+    fileHandle &&
+    (await fileHandle.queryPermission({ mode: "readwrite" })) === "granted"
+  ) {
     const editorView = getEditorView();
     const writable = await fileHandle.createWritable();
     await writable.write(editorView.state.doc.toString());
@@ -79,10 +84,12 @@ export async function saveFileAs() {
     try {
       fileHandle = await window.showSaveFilePicker({
         suggestedName: currentFileName,
-        types: [{
-          description: 'Concept Maps',
-          accept: { 'text/plain': ['.cmap'] },
-        }],
+        types: [
+          {
+            description: "Concept Maps",
+            accept: { "text/plain": [".cmap"] },
+          },
+        ],
       });
       currentFileName = fileHandle.name;
       const writable = await fileHandle.createWritable();
@@ -97,14 +104,16 @@ export async function saveFileAs() {
     // **THE FIX FOR IOS SAVING**
     // Use 'application/octet-stream' to force a raw download and prevent iOS
     // from appending its own extension (like .txt).
-    const blob = new Blob([editorView.state.doc.toString()], { type: "application/octet-stream" });
+    const blob = new Blob([editorView.state.doc.toString()], {
+      type: "application/octet-stream",
+    });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
 
     // Robustly set the filename, removing any prior extension.
     let baseName = currentFileName;
-    if (baseName.includes('.')) {
-        baseName = baseName.substring(0, baseName.lastIndexOf('.'));
+    if (baseName.includes(".")) {
+      baseName = baseName.substring(0, baseName.lastIndexOf("."));
     }
     a.download = `${baseName}.cmap`;
 
@@ -118,14 +127,22 @@ export async function openLastFile() {
   const lastContent = await get("lastFileContent");
   if (lastContent) {
     editorView.dispatch({
-      changes: { from: 0, to: editorView.state.doc.length, insert: lastContent },
+      changes: {
+        from: 0,
+        to: editorView.state.doc.length,
+        insert: lastContent,
+      },
     });
     currentFileName = (await get("lastFileName")) || "concept-map.cmap";
   }
-  
+
   if (window.showOpenFilePicker) {
     const lastFileHandle = await get("lastFile");
-    if (lastFileHandle && (await lastFileHandle.queryPermission({ mode: "readwrite" })) === "granted") {
+    if (
+      lastFileHandle &&
+      (await lastFileHandle.queryPermission({ mode: "readwrite" })) ===
+        "granted"
+    ) {
       fileHandle = lastFileHandle;
     }
   }
@@ -174,10 +191,12 @@ export async function exportStandaloneHTML() {
 
     if (window.showSaveFilePicker) {
       const handle = await window.showSaveFilePicker({
-        types: [{
-          description: "HTML Files",
-          accept: { "text/html": [".html"] },
-        }],
+        types: [
+          {
+            description: "HTML Files",
+            accept: { "text/html": [".html"] },
+          },
+        ],
         suggestedName: "concept-map.html",
       });
       const writable = await handle.createWritable();
