@@ -1,8 +1,14 @@
 function processModuleContent(moduleContent) {
-  // 1. Remove import statements
-  let processed = moduleContent.replace(/^import .* from '.*';$/gm, "");
+  // 1. Remove import statements more robustly
+  let processed = moduleContent.replace(/^import .* from ['"].*['"];$/gm, "");
   // 2. Remove export statements, but keep the function/variable declaration
   processed = processed.replace(/export (function|const|let|var) /g, "$1 ");
+  // 3. Replace editor functions with no-ops for standalone export
+  processed = processed.replace(
+    /highlightNodeInEditor\(([^)]*)\)/g,
+    "(() => {})($1)",
+  );
+  processed = processed.replace(/clearHighlightInEditor\(\)/g, "() => {}");
   return processed;
 }
 
