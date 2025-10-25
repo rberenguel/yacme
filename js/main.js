@@ -13,6 +13,7 @@ import {
 } from "./modules/file.js";
 import { compactDiagramData } from "./modules/initial-data.js";
 import { loadIconMap } from "./modules/icon-map-loader.js";
+import { startQuizMode, stopQuizMode } from "./modules/quiz.js";
 
 async function initializeApp() {
   const iconMap = await loadIconMap();
@@ -45,6 +46,17 @@ window.addEventListener("keydown", (e) => {
   if (e.metaKey && !e.ctrlKey && e.key === "e") {
     e.preventDefault();
     exportStandaloneHTML();
+  }
+  // This is the new keybinding for the quiz mode
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "q") {
+    e.preventDefault();
+    const container = document.querySelector(".container");
+    const isViewOnly = container.classList.toggle("view-only");
+    if (isViewOnly) {
+      startQuizMode();
+    } else {
+      stopQuizMode();
+    }
   }
 });
 

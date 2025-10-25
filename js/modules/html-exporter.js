@@ -18,9 +18,11 @@ export function createStandaloneHTML(
   dagreContent,
   diagramJsContent,
   cssContent,
+  quizJsContent,
 ) {
   const dataString = JSON.stringify(diagramData, null, 2);
   const processedDiagramJs = processModuleContent(diagramJsContent);
+  const processedQuizJs = processModuleContent(quizJsContent);
 
   return `
 <!DOCTYPE html>
@@ -75,6 +77,9 @@ export function createStandaloneHTML(
         // This is the processed content of diagram.js
         ${processedDiagramJs}
 
+        // This is the processed content of quiz.js
+        ${processedQuizJs}
+
         // The diagram data from the main application
         const diagramData = ${dataString};
 
@@ -87,6 +92,21 @@ export function createStandaloneHTML(
         
         // Kick off the diagram rendering and simulation
         updateDiagram(diagramData.nodes);
+
+        // Add keydown listener for the quiz
+        let isQuizActive = false;
+        window.addEventListener("keydown", (e) => {
+            if ((e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "q") {
+                e.preventDefault();
+                if (isQuizActive) {
+                    stopQuizMode();
+                    isQuizActive = false;
+                } else {
+                    startQuizMode();
+                    isQuizActive = true;
+                }
+            }
+        });
     })();
     </script>
 </body>
