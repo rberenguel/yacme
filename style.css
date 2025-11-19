@@ -29,6 +29,8 @@ html {
   width: 40%; /* Initial width */
   min-width: 200px;
   max-width: 80%;
+  display: flex; /* Make it a flex container */
+  flex-direction: column; /* Stack children vertically */
 }
 
 .diagram-pane {
@@ -39,6 +41,7 @@ html {
 }
 .cm-editor {
   height: 100%;
+  flex: 1; /* Fill available space in the flex container */
 }
 svg {
   width: 100%;
