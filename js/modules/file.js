@@ -107,12 +107,20 @@ export async function saveFileAs() {
     }
   }
 
-  const file = new File([new Blob([content], { type: "text/plain" })], currentFileName, {
-    type: "text/plain",
-  });
-  
+  const file = new File(
+    [new Blob([content], { type: "text/plain" })],
+    currentFileName,
+    {
+      type: "text/plain",
+    },
+  );
+
   // If that's not available, try the Web Share API
-  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+  if (
+    navigator.share &&
+    navigator.canShare &&
+    navigator.canShare({ files: [file] })
+  ) {
     try {
       await navigator.share({
         files: [file],
@@ -130,7 +138,7 @@ export async function saveFileAs() {
   });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  
+
   let baseName = currentFileName;
   if (baseName.includes(".")) {
     baseName = baseName.substring(0, baseName.lastIndexOf("."));
@@ -139,7 +147,6 @@ export async function saveFileAs() {
   a.click();
   URL.revokeObjectURL(a.href);
 }
-
 
 export async function openLastFile() {
   const editorView = getEditorView();
@@ -236,19 +243,27 @@ export async function exportStandaloneHTML() {
       }
     }
 
-    const file = new File([new Blob([htmlContent], { type: "text/html" })], "concept-map.html", {
+    const file = new File(
+      [new Blob([htmlContent], { type: "text/html" })],
+      "concept-map.html",
+      {
         type: "text/html",
-    });
-    
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-            await navigator.share({
-            files: [file],
-            });
-            return;
-        } catch (err) {
-            console.error("Share failed:", err);
-        }
+      },
+    );
+
+    if (
+      navigator.share &&
+      navigator.canShare &&
+      navigator.canShare({ files: [file] })
+    ) {
+      try {
+        await navigator.share({
+          files: [file],
+        });
+        return;
+      } catch (err) {
+        console.error("Share failed:", err);
+      }
     }
 
     const blob = new Blob([htmlContent], { type: "text/html" });
@@ -257,7 +272,6 @@ export async function exportStandaloneHTML() {
     a.download = "concept-map.html";
     a.click();
     URL.revokeObjectURL(a.href);
-    
   } catch (error) {
     console.error("Failed to export HTML:", error);
   }
