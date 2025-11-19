@@ -16,6 +16,15 @@ function processModuleContent(moduleContent, iconMapData = null) {
       `let iconMap = ${JSON.stringify(iconMapData)};`,
     );
   }
+  // 5. Make setPresentMode safe for standalone (no editor elements)
+  processed = processed.replace(
+    /const editorPane = document\.getElementById\("editor-pane"\);/g,
+    'const editorPane = document.getElementById("editor-pane") || { style: {} };'
+  );
+  processed = processed.replace(
+    /const resizer = document\.getElementById\("resizer"\);/g,
+    'const resizer = document.getElementById("resizer") || { style: {} };'
+  );
   return processed;
 }
 
@@ -26,7 +35,9 @@ export function createStandaloneHTML(
   diagramJsContent,
   cssContent,
   quizJsContent,
+  parserJsContent,
   iconoirCssContent = "",
+  diagramText = "",
 ) {
   const dataString = JSON.stringify(diagramData, null, 2);
 
@@ -49,6 +60,7 @@ export function createStandaloneHTML(
     parsedIconMap,
   );
   const processedQuizJs = processModuleContent(quizJsContent);
+  const processedParserJs = processModuleContent(parserJsContent);
 
   return `
 <!DOCTYPE html>
@@ -95,6 +107,15 @@ export function createStandaloneHTML(
                 <g id="nodes"></g>
             </g>
         </svg>
+        <div id="slide-controls" style="display: none;">
+            <button id="prev-slide" class="slide-nav-btn">
+                <span>←</span>
+            </button>
+            <div id="slide-indicator"></div>
+            <button id="next-slide" class="slide-nav-btn">
+                <span>→</span>
+            </button>
+        </div>
     </div>
     
     <script>${d3Content}</script>
@@ -103,11 +124,27 @@ export function createStandaloneHTML(
     <script>
     // Self-executing function to encapsulate the diagram logic
     (function() {
+        // This is the processed content of parser.js
+        ${processedParserJs}
+
         // This is the processed content of diagram.js
         ${processedDiagramJs}
 
         // This is the processed content of quiz.js
         ${processedQuizJs}
+
+        // The original diagram text content
+        const diagramText = \`${diagramText.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;
+
+        // Parse the diagram text to get slides if they exist
+        const parsedData = parseCompactFormat(diagramText);
+        let cumulativeSlides = null;
+        if (parsedData.slides) {
+            cumulativeSlides = computeCumulativeSlides(parsedData.slides, parsedData.nodes);
+            setSlideContext(cumulativeSlides, null);
+            cacheFullNodeData(parsedData.nodes);
+            initSlideControls();
+        }
 
         // The diagram data from the main application
         const diagramData = ${dataString};
@@ -124,9 +161,10 @@ export function createStandaloneHTML(
         // Kick off the diagram rendering and simulation
         updateDiagram(diagramData.nodes);
 
-        // Add keydown listener for the quiz
+        // Add keydown listener for quiz and presentation mode
         let isQuizActive = false;
         window.addEventListener("keydown", (e) => {
+            // Quiz mode toggle
             if ((e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "q") {
                 e.preventDefault();
                 if (isQuizActive) {
@@ -135,6 +173,39 @@ export function createStandaloneHTML(
                 } else {
                     startQuizMode();
                     isQuizActive = true;
+                }
+            }
+
+            // Present mode toggle (Cmd/Ctrl+Enter)
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                e.preventDefault();
+                if (hasSlides()) {
+                    setPresentMode(!isPresentMode());
+                }
+            }
+
+            // Escape to exit present mode
+            if (e.key === "Escape" && isPresentMode()) {
+                e.preventDefault();
+                setPresentMode(false);
+            }
+
+            // Arrow keys for slide navigation in present mode
+            if (isPresentMode()) {
+                if (e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    const currentIndex = getCurrentSlideIndex();
+                    if (currentIndex !== null && currentIndex > 0) {
+                        goToSlide(currentIndex - 1);
+                    }
+                }
+                if (e.key === "ArrowRight") {
+                    e.preventDefault();
+                    const currentIndex = getCurrentSlideIndex();
+                    const total = getTotalSlides();
+                    if (currentIndex !== null && currentIndex < total - 1) {
+                        goToSlide(currentIndex + 1);
+                    }
                 }
             }
         });

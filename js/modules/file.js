@@ -188,6 +188,9 @@ export function newFile() {
 
 export async function exportStandaloneHTML() {
   try {
+    const editorView = getEditorView();
+    const diagramText = editorView.state.doc.toString(); // Get the raw text content
+
     const diagramData = getDiagramData();
     const exportData = {
       nodes: diagramData.nodes,
@@ -205,6 +208,7 @@ export async function exportStandaloneHTML() {
       cssContent,
       diagramJsContent,
       quizJsContent,
+      parserJsContent,
       iconoirCssContent,
       iconoirFontBlob,
     ] = await Promise.all([
@@ -213,6 +217,7 @@ export async function exportStandaloneHTML() {
       fetch("style.css").then((res) => res.text()),
       fetch("js/modules/diagram.js").then((res) => res.text()),
       fetch("js/modules/quiz.js").then((res) => res.text()),
+      fetch("js/modules/parser.js").then((res) => res.text()),
       fetch("fonts/iconoir/iconoir-font.css").then((res) => res.text()),
       fetch("fonts/iconoir/iconoir.woff2").then((res) => res.blob()),
     ]);
@@ -237,7 +242,9 @@ export async function exportStandaloneHTML() {
       diagramJsContent,
       cssContent,
       quizJsContent,
+      parserJsContent,
       inlinedIconoirCss,
+      diagramText,
     );
 
     if (window.showSaveFilePicker) {
