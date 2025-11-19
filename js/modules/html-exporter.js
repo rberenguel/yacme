@@ -19,11 +19,11 @@ function processModuleContent(moduleContent, iconMapData = null) {
   // 5. Make setPresentMode safe for standalone (no editor elements)
   processed = processed.replace(
     /const editorPane = document\.getElementById\("editor-pane"\);/g,
-    'const editorPane = document.getElementById("editor-pane") || { style: {} };'
+    'const editorPane = document.getElementById("editor-pane") || { style: {} };',
   );
   processed = processed.replace(
     /const resizer = document\.getElementById\("resizer"\);/g,
-    'const resizer = document.getElementById("resizer") || { style: {} };'
+    'const resizer = document.getElementById("resizer") || { style: {} };',
   );
   return processed;
 }
@@ -38,6 +38,7 @@ export function createStandaloneHTML(
   parserJsContent,
   iconoirCssContent = "",
   diagramText = "",
+  ostrichsansCssContent = "",
 ) {
   const dataString = JSON.stringify(diagramData, null, 2);
 
@@ -72,6 +73,9 @@ export function createStandaloneHTML(
     <style>
         /* Iconoir icon font */
         ${iconoirCssContent}
+
+        /* OstrichSans font for presentations */
+        ${ostrichsansCssContent}
 
         /* Base styles for standalone export */
         body, html {
@@ -134,7 +138,7 @@ export function createStandaloneHTML(
         ${processedQuizJs}
 
         // The original diagram text content
-        const diagramText = \`${diagramText.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;
+        const diagramText = \`${diagramText.replace(/`/g, "\\`").replace(/\$/g, "\\$")}\`;
 
         // Parse the diagram text to get slides if they exist
         const parsedData = parseCompactFormat(diagramText);

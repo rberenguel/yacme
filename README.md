@@ -17,6 +17,30 @@ Following the trails of [Garbuix](https://github.com/rberenguel/garbuix) and oth
 
 ## Quick Start
 
+### Style Preamble (Optional)
+
+Define global default styles at the beginning of your diagram:
+
+```
+- nodeStyle="fill: #1a1a2e; stroke: #2aa198;"
+- labelStyle="fill: #93a1a1;"
+- edgeStyle="stroke: #cb4b16; stroke-width: 2;"
+- edgeLabelStyle="fill: #b58900;"
+- charWidth="12"
+- lineHeight="24"
+- baseHeight="60"
+- widthPadding="50"
+```
+
+**Style directives** cascade to all nodes and edges, and can be overridden individually.
+
+**Sizing directives** control node dimensions:
+
+- `charWidth`: Pixels per character for node width (default: 9)
+- `lineHeight`: Pixels per line for multi-line nodes (default: 18)
+- `baseHeight`: Base height in pixels (default: 50)
+- `widthPadding`: Width padding in pixels (default: 40)
+
 ### Basic Node
 
 ```
@@ -140,13 +164,17 @@ Directives are key-value pairs added after a semicolon `;`.
 
 #### Node Directives
 
-| Directive    | Description                  | Example                                         |
-| ------------ | ---------------------------- | ----------------------------------------------- |
-| `nodeStyle`  | Inline CSS for the rectangle | `nodeStyle="stroke: red; fill: #222;"`          |
-| `nodeClass`  | CSS class for the node       | `nodeClass="important"`                         |
-| `labelStyle` | Inline CSS for the text      | `labelStyle="fill: orange; font-weight: bold;"` |
-| `labelClass` | CSS class for the label      | `labelClass="highlight"`                        |
-| `url`        | Makes node clickable         | `url="https://example.com"`                     |
+| Directive      | Description                  | Example                                         |
+| -------------- | ---------------------------- | ----------------------------------------------- |
+| `nodeStyle`    | Inline CSS for the rectangle | `nodeStyle="stroke: red; fill: #222;"`          |
+| `nodeClass`    | CSS class for the node       | `nodeClass="important"`                         |
+| `labelStyle`   | Inline CSS for the text      | `labelStyle="fill: orange; font-weight: bold;"` |
+| `labelClass`   | CSS class for the label      | `labelClass="highlight"`                        |
+| `url`          | Makes node clickable         | `url="https://example.com"`                     |
+| `charWidth`    | Pixels per character         | `charWidth="12"` (default: 9)                   |
+| `lineHeight`   | Pixels per line              | `lineHeight="24"` (default: 18)                 |
+| `baseHeight`   | Base height in pixels        | `baseHeight="60"` (default: 50)                 |
+| `widthPadding` | Width padding in pixels      | `widthPadding="50"` (default: 40)               |
 
 #### Edge Directives
 
@@ -196,7 +224,7 @@ Create presentations that progressively reveal your diagram.
 
 ### Basic Slides
 
-Add `SLIDES` marker after your graph, then define slides separated by `---`:
+Add `# SLIDES` marker after your graph, then define slides separated by `---`:
 
 ```
 A First Node
@@ -206,7 +234,7 @@ C Third Node
 A -> B connects
 B -> C leads to
 
-SLIDES
+# SLIDES
 
 A
 ---

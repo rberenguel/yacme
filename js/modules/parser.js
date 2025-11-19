@@ -16,22 +16,81 @@ export function parseCompactFormat(text) {
   const slides = [];
   let currentSlide = null;
 
+  // Global default styles from preamble
+  const defaultStyles = {
+    nodeStyle: "",
+    labelStyle: "",
+    edgeStyle: "",
+    edgeLabelStyle: "",
+    charWidth: "9", // pixels per character for node width
+    lineHeight: "18", // pixels per line for node height
+    baseHeight: "50", // base height in pixels
+    widthPadding: "40", // width padding in pixels
+  };
+
   function ensureNode(id) {
     if (!nodesMap.has(id)) {
-      nodesMap.set(id, { id, parentRelations: [], prose: "", directives: {} });
+      const node = { id, parentRelations: [], prose: "", directives: {} };
+      // Apply default styles if they exist
+      if (defaultStyles.nodeStyle) {
+        node.directives.nodeStyle = defaultStyles.nodeStyle;
+      }
+      if (defaultStyles.labelStyle) {
+        node.directives.labelStyle = defaultStyles.labelStyle;
+      }
+      // Apply default sizing parameters
+      if (defaultStyles.charWidth) {
+        node.directives.charWidth = defaultStyles.charWidth;
+      }
+      if (defaultStyles.lineHeight) {
+        node.directives.lineHeight = defaultStyles.lineHeight;
+      }
+      if (defaultStyles.baseHeight) {
+        node.directives.baseHeight = defaultStyles.baseHeight;
+      }
+      if (defaultStyles.widthPadding) {
+        node.directives.widthPadding = defaultStyles.widthPadding;
+      }
+      nodesMap.set(id, node);
     }
     return nodesMap.get(id);
   }
 
   const lines = text.trim().split("\n");
   let lineNumber = 0;
+  let inPreamble = true; // Track if we're still in the preamble section
 
   for (const line of lines) {
     lineNumber++;
     const trimmedLine = line.trim();
 
+    // Parse preamble (lines starting with - at the beginning)
+    if (inPreamble && trimmedLine.startsWith("- ")) {
+      const preambleLine = trimmedLine.substring(2).trim();
+      const directives = parseDirectives(preambleLine);
+      if (directives.nodeStyle) defaultStyles.nodeStyle = directives.nodeStyle;
+      if (directives.labelStyle)
+        defaultStyles.labelStyle = directives.labelStyle;
+      if (directives.edgeStyle) defaultStyles.edgeStyle = directives.edgeStyle;
+      if (directives.edgeLabelStyle)
+        defaultStyles.edgeLabelStyle = directives.edgeLabelStyle;
+      if (directives.charWidth) defaultStyles.charWidth = directives.charWidth;
+      if (directives.lineHeight)
+        defaultStyles.lineHeight = directives.lineHeight;
+      if (directives.baseHeight)
+        defaultStyles.baseHeight = directives.baseHeight;
+      if (directives.widthPadding)
+        defaultStyles.widthPadding = directives.widthPadding;
+      continue;
+    }
+
+    // Once we encounter anything else, we're out of preamble
+    if (inPreamble && trimmedLine !== "" && !trimmedLine.startsWith("- ")) {
+      inPreamble = false;
+    }
+
     // Check for SLIDES marker
-    if (trimmedLine === "SLIDES") {
+    if (trimmedLine === "# SLIDES") {
       parsingSlides = true;
       currentSlide = {
         nodes: [],
@@ -160,11 +219,27 @@ export function parseCompactFormat(text) {
       const verb = targetWords.join(" ");
       const directives = parseDirectives(directiveString);
 
+      // Apply default edge styles
+      const edgeDirectives = { ...directives };
+      if (defaultStyles.edgeStyle && !directives.nodeStyle) {
+        edgeDirectives.nodeStyle = defaultStyles.edgeStyle;
+      } else if (defaultStyles.edgeStyle && directives.nodeStyle) {
+        // Merge: user styles override defaults
+        edgeDirectives.nodeStyle =
+          defaultStyles.edgeStyle + "; " + directives.nodeStyle;
+      }
+      if (defaultStyles.edgeLabelStyle && !directives.labelStyle) {
+        edgeDirectives.labelStyle = defaultStyles.edgeLabelStyle;
+      } else if (defaultStyles.edgeLabelStyle && directives.labelStyle) {
+        edgeDirectives.labelStyle =
+          defaultStyles.edgeLabelStyle + "; " + directives.labelStyle;
+      }
+
       ensureNode(sourceId);
       ensureNode(targetId).parentRelations.push({
         id: sourceId,
         verb,
-        directives,
+        directives: edgeDirectives,
       });
       continue;
     }
@@ -187,7 +262,29 @@ export function parseCompactFormat(text) {
     if (nodeId) {
       const node = ensureNode(nodeId);
       if (title) node.title = title;
-      node.directives = parseDirectives(directiveString);
+      const userDirectives = parseDirectives(directiveString);
+
+      // Merge user directives with defaults (user overrides)
+      if (userDirectives.nodeStyle && node.directives.nodeStyle) {
+        node.directives.nodeStyle =
+          node.directives.nodeStyle + "; " + userDirectives.nodeStyle;
+      } else if (userDirectives.nodeStyle) {
+        node.directives.nodeStyle = userDirectives.nodeStyle;
+      }
+
+      if (userDirectives.labelStyle && node.directives.labelStyle) {
+        node.directives.labelStyle =
+          node.directives.labelStyle + "; " + userDirectives.labelStyle;
+      } else if (userDirectives.labelStyle) {
+        node.directives.labelStyle = userDirectives.labelStyle;
+      }
+
+      // Copy other directives that don't have defaults
+      for (const key in userDirectives) {
+        if (key !== "nodeStyle" && key !== "labelStyle") {
+          node.directives[key] = userDirectives[key];
+        }
+      }
     }
   }
 

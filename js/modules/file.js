@@ -2,6 +2,7 @@ import { set, get } from "../../libs/idb-keyval.js";
 import { getEditorView } from "./editor.js";
 import { getDiagramData } from "./diagram.js";
 import { createStandaloneHTML } from "./html-exporter.js";
+import { compactDiagramData } from "./initial-data.js";
 
 let fileHandle = null;
 let currentFileName = "concept-map.cmap";
@@ -177,12 +178,16 @@ export async function openLastFile() {
 export function newFile() {
   const editorView = getEditorView();
   editorView.dispatch({
-    changes: { from: 0, to: editorView.state.doc.length, insert: "" },
+    changes: {
+      from: 0,
+      to: editorView.state.doc.length,
+      insert: compactDiagramData,
+    },
   });
   fileHandle = null;
   currentFileName = "concept-map.cmap";
   set("lastFile", null);
-  set("lastFileContent", "");
+  set("lastFileContent", compactDiagramData);
   set("lastFileName", null);
 }
 
@@ -211,6 +216,8 @@ export async function exportStandaloneHTML() {
       parserJsContent,
       iconoirCssContent,
       iconoirFontBlob,
+      ostrichsansCssContent,
+      ostrichsansBase64Module,
     ] = await Promise.all([
       fetch("libs/d3v7.js").then((res) => res.text()),
       fetch("libs/dagre.js").then((res) => res.text()),
@@ -220,6 +227,8 @@ export async function exportStandaloneHTML() {
       fetch("js/modules/parser.js").then((res) => res.text()),
       fetch("fonts/iconoir/iconoir-font.css").then((res) => res.text()),
       fetch("fonts/iconoir/iconoir.woff2").then((res) => res.blob()),
+      fetch("fonts/ostrichsans.css").then((res) => res.text()),
+      import("../../fonts/ostrichsans-base64.js"),
     ]);
 
     // Convert font to base64 for embedding
@@ -235,6 +244,25 @@ export async function exportStandaloneHTML() {
       `url("data:font/woff2;base64,${fontBase64}")`,
     );
 
+    // Create inline CSS for OstrichSans fonts with base64 data
+    // Strip newlines from base64 strings to prevent CSS parsing issues
+    const mediumBase64 =
+      ostrichsansBase64Module.ostrichSansMediumBase64.replace(/\s/g, "");
+    const heavyBase64 = ostrichsansBase64Module.ostrichSansHeavyBase64.replace(
+      /\s/g,
+      "",
+    );
+
+    const inlinedOstrichsansCss = ostrichsansCssContent
+      .replace(
+        /url\("\.\/OstrichSans-Medium\.otf"\)/g,
+        `url("data:font/opentype;base64,${mediumBase64}")`,
+      )
+      .replace(
+        /url\("\.\/OstrichSans-Heavy\.otf"\)/g,
+        `url("data:font/opentype;base64,${heavyBase64}")`,
+      );
+
     const htmlContent = createStandaloneHTML(
       exportData,
       d3Content,
@@ -245,6 +273,7 @@ export async function exportStandaloneHTML() {
       parserJsContent,
       inlinedIconoirCss,
       diagramText,
+      inlinedOstrichsansCss,
     );
 
     if (window.showSaveFilePicker) {

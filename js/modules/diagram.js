@@ -264,6 +264,39 @@ const simulation = d3
   .alphaDecay(0.05)
   .on("tick", ticked);
 
+/**
+ * Calculates the precise height needed for prose content by measuring actual rendered size.
+ * @param {string} prose - The prose/markdown content
+ * @param {number} width - Available width for text (default 320px for 360px node)
+ * @returns {number} Actual height in pixels
+ */
+function estimateProseHeight(prose, width = 320) {
+  if (!prose || typeof prose !== "string" || prose.trim().length === 0) {
+    return 100;
+  }
+
+  // Create a temporary invisible div with the same styling as .prose-content
+  const tempDiv = document.createElement("div");
+  tempDiv.style.position = "absolute";
+  tempDiv.style.visibility = "hidden";
+  tempDiv.style.width = `${width}px`;
+  tempDiv.style.fontSize = "13px";
+  tempDiv.style.lineHeight = "1.5";
+  tempDiv.style.padding = "10px";
+  tempDiv.style.boxSizing = "border-box";
+  tempDiv.innerHTML = prose;
+
+  // Append to DOM to measure
+  document.body.appendChild(tempDiv);
+  const actualHeight = tempDiv.scrollHeight;
+  document.body.removeChild(tempDiv);
+
+  // Cap at 50vh
+  const maxHeight = window.innerHeight * 0.5;
+
+  return Math.min(actualHeight, maxHeight);
+}
+
 function updateDiagramAppearance() {
   const nodeSelection = nodesGroup.selectAll("g.node");
   nodeSelection.each(function (d) {
@@ -273,8 +306,28 @@ function updateDiagramAppearance() {
       (a, b) => (a.length > b.length ? a : b),
       "",
     );
-    d.width = d.expanded ? 360 : longestLine.length * 9 + 40;
-    d.height = d.expanded ? 160 : 50 + (lines.length - 1) * 18;
+    // Get sizing parameters from directives or use defaults
+    const charWidth = parseFloat(d.directives?.charWidth || "9");
+    const lineHeight = parseFloat(d.directives?.lineHeight || "18");
+    const baseHeight = parseFloat(d.directives?.baseHeight || "50");
+    const widthPadding = parseFloat(d.directives?.widthPadding || "40");
+
+    d.width = d.expanded ? 360 : longestLine.length * charWidth + widthPadding;
+
+    if (d.expanded) {
+      // Calculate height based on prose content for expanded nodes
+      if (d.prose) {
+        const proseHeight = estimateProseHeight(d.prose, 320);
+        // Add space for title at top (~50px)
+        d.height = proseHeight + 50;
+      } else {
+        // Expanded but no prose (shouldn't happen, but fallback)
+        d.height = 160;
+      }
+    } else {
+      // Non-expanded node - size based on label
+      d.height = baseHeight + (lines.length - 1) * lineHeight;
+    }
   });
 
   nodeSelection
@@ -302,7 +355,12 @@ function updateDiagramAppearance() {
     .filter((d) => d.expanded)
     .append("foreignObject")
     .attr("width", (d) => d.width - 20)
-    .attr("height", (d) => d.height - 50)
+    .attr("height", (d) => {
+      if (d.prose) {
+        return estimateProseHeight(d.prose, 320);
+      }
+      return 110;
+    })
     .attr("x", (d) => -d.width / 2 + 10)
     .attr("y", (d) => -d.height / 2 + 40)
     .style("opacity", 0)
