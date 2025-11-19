@@ -207,13 +207,13 @@ svg {
 .container.present-mode .node:hover rect,
 .container.view-only .node:hover rect {
   filter: drop-shadow(0 0 10px var(--hover-shadow-color, #b58900))
-          drop-shadow(0 0 20px var(--hover-shadow-color, #b58900));
+    drop-shadow(0 0 20px var(--hover-shadow-color, #b58900));
 }
 
 .container.present-mode .link:hover,
 .container.view-only .link:hover {
   filter: drop-shadow(0 0 10px var(--hover-shadow-color, #b58900))
-          drop-shadow(0 0 20px var(--hover-shadow-color, #b58900))
-          drop-shadow(0 0 30px var(--hover-shadow-color, #b58900));
+    drop-shadow(0 0 20px var(--hover-shadow-color, #b58900))
+    drop-shadow(0 0 30px var(--hover-shadow-color, #b58900));
   stroke-width: 4px;
 }

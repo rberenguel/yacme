@@ -541,48 +541,59 @@ export function updateDiagram(newData) {
   const nodeSelection = nodesGroup
     .selectAll("g.node")
     .data(nodes, (d) => d.id)
-    .join((enter) => {
-      const g = enter.append("g").on("click", function (event, d) {
-        // We use a standard function to get the correct 'this' context.
-        // 'this' refers to the <g> element that was clicked.
+    .join(
+      (enter) => {
+        const g = enter
+          .append("g")
+          .style("opacity", 0)
+          .call((group) => group.transition().duration(400).style("opacity", 1))
+          .on("click", function (event, d) {
+            // We use a standard function to get the correct 'this' context.
+            // 'this' refers to the <g> element that was clicked.
 
-        const textElement = d3.select(this).select("text.label").node();
-        if (!textElement) return;
+            const textElement = d3.select(this).select("text.label").node();
+            if (!textElement) return;
 
-        const textBBox = textElement.getBBox();
-        const [x, y] = d3.pointer(event, this); // Get click coordinates relative to the <g>
+            const textBBox = textElement.getBBox();
+            const [x, y] = d3.pointer(event, this); // Get click coordinates relative to the <g>
 
-        // Manually check if the click was inside the text's bounding box
-        if (
-          d.directives?.url &&
-          x >= textBBox.x &&
-          x <= textBBox.x + textBBox.width &&
-          y >= textBBox.y &&
-          y <= textBBox.y + textBBox.height
-        ) {
-          // If it was, and there's a URL, open it.
-          event.stopPropagation();
-          window.open(d.directives.url, "_blank");
-        } else {
-          // Otherwise, perform the standard node click action.
-          event.stopPropagation();
-          highlightNodeInEditor(d.id);
-          if (event.defaultPrevented || !d.prose) return;
-          d.expanded = !d.expanded;
-          if (d.expanded) {
-            d.fx = null;
-            d.fy = null;
-          }
-          updateDiagramAppearance();
-        }
-      });
+            // Manually check if the click was inside the text's bounding box
+            if (
+              d.directives?.url &&
+              x >= textBBox.x &&
+              x <= textBBox.x + textBBox.width &&
+              y >= textBBox.y &&
+              y <= textBBox.y + textBBox.height
+            ) {
+              // If it was, and there's a URL, open it.
+              event.stopPropagation();
+              window.open(d.directives.url, "_blank");
+            } else {
+              // Otherwise, perform the standard node click action.
+              event.stopPropagation();
+              highlightNodeInEditor(d.id);
+              if (event.defaultPrevented || !d.prose) return;
+              d.expanded = !d.expanded;
+              if (d.expanded) {
+                d.fx = null;
+                d.fy = null;
+              }
+              updateDiagramAppearance();
+            }
+          });
 
-      // Append the children. No event handlers on them directly.
-      g.append("rect").attr("rx", 6).attr("ry", 6);
-      g.append("text").attr("class", "label");
+        // Append the children. No event handlers on them directly.
+        g.append("rect").attr("rx", 6).attr("ry", 6);
+        g.append("text").attr("class", "label");
 
-      return g;
-    });
+        return g;
+      },
+      (update) => update,
+      (exit) =>
+        exit
+          .call((group) => group.transition().duration(300).style("opacity", 0))
+          .remove(),
+    );
 
   nodeSelection
     .select("text.label")
@@ -640,7 +651,18 @@ export function updateDiagram(newData) {
   linksGroup
     .selectAll("path.link")
     .data(links, (d) => `${d.source.id || d.source}-${d.target.id || d.target}`)
-    .join("path")
+    .join(
+      (enter) =>
+        enter
+          .append("path")
+          .style("opacity", 0)
+          .call((path) => path.transition().duration(400).style("opacity", 1)),
+      (update) => update,
+      (exit) =>
+        exit
+          .call((path) => path.transition().duration(300).style("opacity", 0))
+          .remove(),
+    )
     .attr("class", (d) => `link ${d.directives?.nodeClass || ""}`)
     .attr("style", (d) => d.directives?.nodeStyle || null)
     .style(
@@ -659,11 +681,24 @@ export function updateDiagram(newData) {
   const linkLabelGroups = linksGroup
     .selectAll("g.link-label-group")
     .data(links, (d) => `${d.source.id || d.source}-${d.target.id || d.target}`)
-    .join((enter) => {
-      const g = enter.append("g").attr("class", "link-label-group");
-      g.append("text");
-      return g;
-    });
+    .join(
+      (enter) => {
+        const g = enter
+          .append("g")
+          .attr("class", "link-label-group")
+          .style("opacity", 0)
+          .call((group) =>
+            group.transition().duration(400).style("opacity", 1),
+          );
+        g.append("text");
+        return g;
+      },
+      (update) => update,
+      (exit) =>
+        exit
+          .call((group) => group.transition().duration(300).style("opacity", 0))
+          .remove(),
+    );
 
   linkLabelGroups
     .select("text")
