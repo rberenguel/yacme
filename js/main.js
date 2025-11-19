@@ -1,7 +1,17 @@
 // js/main.js
 
 import { parseCompactFormat } from "./modules/parser.js";
-import { updateDiagram, setIconMap } from "./modules/diagram.js";
+import {
+  updateDiagram,
+  setIconMap,
+  initSlideControls,
+  setPresentMode,
+  isPresentMode,
+  hasSlides,
+  goToSlide,
+  getCurrentSlideIndex,
+  getTotalSlides,
+} from "./modules/diagram.js";
 import { setupEditor } from "./modules/editor.js";
 import {
   openFile,
@@ -20,7 +30,8 @@ async function initializeApp() {
   setIconMap(iconMap); // Pass the dynamically loaded map to the diagram module
 
   setupEditor(compactDiagramData);
-  updateDiagram(parseCompactFormat(compactDiagramData));
+  updateDiagram(parseCompactFormat(compactDiagramData).nodes);
+  initSlideControls(); // Initialize slide navigation buttons
   openLastFile();
 }
 
@@ -56,6 +67,36 @@ window.addEventListener("keydown", (e) => {
       startQuizMode();
     } else {
       stopQuizMode();
+    }
+  }
+  // Present mode toggle (Cmd/Ctrl+Enter)
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+    e.preventDefault();
+    if (hasSlides()) {
+      setPresentMode(!isPresentMode());
+    }
+  }
+  // Escape to exit present mode
+  if (e.key === "Escape" && isPresentMode()) {
+    e.preventDefault();
+    setPresentMode(false);
+  }
+  // Arrow keys for slide navigation in present mode
+  if (isPresentMode()) {
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      const currentIndex = getCurrentSlideIndex();
+      if (currentIndex !== null && currentIndex > 0) {
+        goToSlide(currentIndex - 1);
+      }
+    }
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      const currentIndex = getCurrentSlideIndex();
+      const total = getTotalSlides();
+      if (currentIndex !== null && currentIndex < total - 1) {
+        goToSlide(currentIndex + 1);
+      }
     }
   }
 });

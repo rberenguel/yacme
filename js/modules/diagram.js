@@ -11,6 +11,9 @@ const nodesGroup = zoomGroup.select("#nodes");
 let nodes = [];
 let links = [];
 let iconMap = {}; // This will hold the map loaded by main.js
+let allSlides = null; // All cumulative slides
+let currentSlideIndex = null; // Current slide being viewed/edited
+let presentMode = false; // Whether we're in presentation mode
 
 svg.on("click", (event) => {
   if (event.target === svg.node()) {
@@ -24,6 +27,154 @@ svg.on("click", (event) => {
  */
 export function setIconMap(map) {
   iconMap = map;
+}
+
+/**
+ * Sets the slide context for filtering the diagram.
+ * @param {Array} slides - Cumulative slides array
+ * @param {number} slideIndex - Current slide index (null for full graph)
+ */
+export function setSlideContext(slides, slideIndex) {
+  allSlides = slides;
+  currentSlideIndex = slideIndex;
+}
+
+/**
+ * Gets the current slide data.
+ */
+export function getCurrentSlide() {
+  if (!allSlides || currentSlideIndex === null) return null;
+  return allSlides[currentSlideIndex];
+}
+
+export function getCurrentSlideIndex() {
+  return currentSlideIndex;
+}
+
+export function getTotalSlides() {
+  return allSlides ? allSlides.length : 0;
+}
+
+/**
+ * Navigates to a specific slide (used in present mode).
+ */
+export function goToSlide(index) {
+  if (!allSlides || index < 0 || index >= allSlides.length) return;
+  currentSlideIndex = index;
+  updateDiagramFromSlide();
+}
+
+/**
+ * Enters or exits present mode.
+ */
+export function setPresentMode(enabled) {
+  presentMode = enabled;
+  const editorPane = document.getElementById("editor-pane");
+  const resizer = document.getElementById("resizer");
+  const slideControls = document.getElementById("slide-controls");
+
+  if (enabled) {
+    editorPane.style.display = "none";
+    resizer.style.display = "none";
+    if (slideControls) slideControls.style.display = "flex";
+    if (allSlides && allSlides.length > 0) {
+      currentSlideIndex = 0;
+      // Force diagram update by triggering a re-layout
+      const currentNodes = nodes.slice(); // Keep reference to current nodes
+      updateDiagramFromSlide();
+      // Restart simulation briefly to adjust layout
+      simulation.alpha(0.3).restart();
+    }
+  } else {
+    editorPane.style.display = "flex";
+    resizer.style.display = "block";
+    if (slideControls) slideControls.style.display = "none";
+    // When exiting, clear slide context to show full graph
+    currentSlideIndex = null;
+    // Trigger multiple resizes to ensure proper layout
+    setTimeout(() => {
+      const svgElement = document.querySelector(".diagram-pane");
+      width = svgElement.clientWidth;
+      height = svgElement.clientHeight;
+      resizeDiagram();
+    }, 0);
+    setTimeout(() => {
+      resizeDiagram();
+    }, 100);
+  }
+}
+
+export function isPresentMode() {
+  return presentMode;
+}
+
+export function hasSlides() {
+  return allSlides && allSlides.length > 0;
+}
+
+let cachedFullNodeData = null;
+
+/**
+ * Caches the full node data for use when switching slides.
+ */
+export function cacheFullNodeData(nodeData) {
+  cachedFullNodeData = nodeData;
+}
+
+/**
+ * Updates the diagram based on the current slide.
+ */
+function updateDiagramFromSlide() {
+  if (cachedFullNodeData) {
+    // Re-run updateDiagram with cached data to apply slide filtering
+    updateDiagram(cachedFullNodeData);
+  }
+  updateSlideIndicator();
+}
+
+/**
+ * Updates the slide indicator and button states.
+ */
+function updateSlideIndicator() {
+  const indicator = document.getElementById("slide-indicator");
+  const prevBtn = document.getElementById("prev-slide");
+  const nextBtn = document.getElementById("next-slide");
+
+  if (!allSlides || !indicator) return;
+
+  indicator.textContent = `Slide ${currentSlideIndex + 1} / ${allSlides.length}`;
+
+  if (prevBtn) {
+    prevBtn.disabled = currentSlideIndex <= 0;
+  }
+
+  if (nextBtn) {
+    nextBtn.disabled = currentSlideIndex >= allSlides.length - 1;
+  }
+}
+
+/**
+ * Initializes slide navigation controls.
+ */
+export function initSlideControls() {
+  const prevBtn = document.getElementById("prev-slide");
+  const nextBtn = document.getElementById("next-slide");
+
+  if (prevBtn) {
+    prevBtn.addEventListener("click", () => {
+      if (currentSlideIndex > 0) {
+        goToSlide(currentSlideIndex - 1);
+      }
+    });
+  }
+
+  if (nextBtn) {
+    nextBtn.addEventListener("click", () => {
+      if (allSlides && currentSlideIndex < allSlides.length - 1) {
+        goToSlide(currentSlideIndex + 1);
+      }
+    });
+  }
 }
 
 /**
@@ -236,13 +387,15 @@ svg.call(zoom).call(zoom.scaleTo, 0.8);
 
 export function updateDiagram(newData) {
   const oldNodeMap = new Map(nodes.map((d) => [d.id, d]));
-  nodes = newData.map((d) => Object.assign(oldNodeMap.get(d.id) || {}, d));
+  let allNodes = newData.map((d) =>
+    Object.assign(oldNodeMap.get(d.id) || {}, d),
+  );
 
-  links = [];
+  let allLinks = [];
   newData.forEach((d) => {
     if (d.parentRelations) {
       d.parentRelations.forEach((p) => {
-        links.push({
+        allLinks.push({
           source: p.id,
           target: d.id,
           verb: p.verb,
@@ -251,6 +404,50 @@ export function updateDiagram(newData) {
       });
     }
   });
+
+  // Filter by current slide if applicable
+  const currentSlide = getCurrentSlide();
+  if (currentSlide && currentSlideIndex !== null) {
+    const visibleNodeIds = new Set(currentSlide.visibleNodes);
+
+    // Filter nodes
+    nodes = allNodes.filter((n) => visibleNodeIds.has(n.id));
+
+    // Filter links - check if edge reference matches
+    links = allLinks.filter((link) => {
+      const sourceId = link.source.id || link.source;
+      const targetId = link.target.id || link.target;
+
+      // Check if this edge is in the visible edges list
+      return currentSlide.visibleEdges.some((edgeStr) => {
+        const [src, tgt] = edgeStr.split("->").map((s) => s.trim());
+        const tgtId = tgt.split(/\s+/)[0]; // Extract just the ID
+        return src === sourceId && tgtId === targetId;
+      });
+    });
+
+    // Auto-expand nodes if marked with +
+    if (currentSlide.autoExpandNodes) {
+      nodes.forEach((node) => {
+        if (currentSlide.autoExpandNodes.includes(node.id)) {
+          node.expanded = true;
+        }
+      });
+    }
+
+    // Auto-collapse nodes if marked with ~
+    if (currentSlide.autoCollapseNodes) {
+      nodes.forEach((node) => {
+        if (currentSlide.autoCollapseNodes.includes(node.id)) {
+          node.expanded = false;
+        }
+      });
+    }
+  } else {
+    // No slide filtering, show everything
+    nodes = allNodes;
+    links = allLinks;
+  }
   const g = new dagre.graphlib.Graph();
   g.setGraph({ rankdir: "TB", marginx: 20, marginy: 20 });
   g.setDefaultEdgeLabel(() => ({}));
@@ -339,15 +536,47 @@ export function updateDiagram(newData) {
       } ${d.directives?.nodeClass || ""}`,
   );
 
+  // Create or update arrow markers for custom colors
+  const defs = svg.select("defs");
+  const uniqueArrowColors = new Set();
+  links.forEach((link) => {
+    if (link.directives?.arrowColor && link.directives?.arrow !== "none") {
+      uniqueArrowColors.add(link.directives.arrowColor);
+    }
+  });
+
+  uniqueArrowColors.forEach((color) => {
+    const markerId = `arrowhead-${color.replace("#", "")}`;
+    if (defs.select(`#${markerId}`).empty()) {
+      defs
+        .append("marker")
+        .attr("id", markerId)
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", "10")
+        .attr("refY", "0")
+        .attr("markerWidth", "6")
+        .attr("markerHeight", "6")
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L10,0L0,5")
+        .attr("fill", color);
+    }
+  });
+
   linksGroup
     .selectAll("path.link")
     .data(links, (d) => `${d.source.id || d.source}-${d.target.id || d.target}`)
     .join("path")
     .attr("class", (d) => `link ${d.directives?.nodeClass || ""}`)
     .attr("style", (d) => d.directives?.nodeStyle || null)
-    .attr("marker-end", (d) =>
-      d.directives?.arrow === "none" ? null : "url(#arrowhead)",
-    );
+    .attr("marker-end", (d) => {
+      if (d.directives?.arrow === "none") return null;
+      if (d.directives?.arrowColor) {
+        const colorId = d.directives.arrowColor.replace("#", "");
+        return `url(#arrowhead-${colorId})`;
+      }
+      return "url(#arrowhead)";
+    });
 
   const linkLabelGroups = linksGroup
     .selectAll("g.link-label-group")

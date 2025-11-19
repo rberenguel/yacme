@@ -13,10 +13,15 @@ import {
   Decoration,
   ViewPlugin,
 } from "CodeMirrorBundle";
-import { parseCompactFormat } from "./parser.js";
-import { updateDiagram } from "./diagram.js";
+import { parseCompactFormat, computeCumulativeSlides } from "./parser.js";
+import {
+  updateDiagram,
+  setSlideContext,
+  cacheFullNodeData,
+} from "./diagram.js";
 
 let editorView;
+let currentParsedData = null;
 
 // --- Highlighting Logic using a ViewPlugin ---
 
@@ -57,10 +62,59 @@ export function setupEditor(initialDoc) {
         highlightPlugin,
         highlightTheme,
         EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
+          if (update.docChanged || update.selectionSet) {
             try {
-              const newData = parseCompactFormat(update.state.doc.toString());
-              updateDiagram(newData);
+              const docText = update.state.doc.toString();
+              const parsedData = parseCompactFormat(docText);
+              currentParsedData = parsedData;
+
+              // Compute cumulative slides if slides exist
+              let cumulativeSlides = null;
+              if (parsedData.slides) {
+                cumulativeSlides = computeCumulativeSlides(
+                  parsedData.slides,
+                  parsedData.nodes,
+                );
+              }
+
+              // Determine which slide the cursor is in
+              let currentSlideIndex = null;
+              if (cumulativeSlides) {
+                const cursorLine = update.state.doc.lineAt(
+                  update.state.selection.main.head,
+                ).number;
+                for (let i = 0; i < cumulativeSlides.length; i++) {
+                  const slide = cumulativeSlides[i];
+                  if (
+                    cursorLine >= slide.lineStart &&
+                    cursorLine <= slide.lineEnd
+                  ) {
+                    currentSlideIndex = i;
+                    break;
+                  }
+                }
+                // If cursor is after all slides, show the last slide
+                if (currentSlideIndex === null && cumulativeSlides.length > 0) {
+                  const lastSlide =
+                    cumulativeSlides[cumulativeSlides.length - 1];
+                  if (cursorLine > lastSlide.lineEnd) {
+                    currentSlideIndex = cumulativeSlides.length - 1;
+                  }
+                }
+              }
+
+              // Cache the full node data for slide switching
+              cacheFullNodeData(parsedData.nodes);
+
+              // Update diagram with slide context
+              if (update.docChanged) {
+                setSlideContext(cumulativeSlides, currentSlideIndex);
+                updateDiagram(parsedData.nodes);
+              } else if (update.selectionSet && currentSlideIndex !== null) {
+                // Cursor moved, update slide preview
+                setSlideContext(cumulativeSlides, currentSlideIndex);
+                updateDiagram(parsedData.nodes);
+              }
             } catch (e) {
               console.error("Error parsing diagram text:", e);
             }
@@ -75,6 +129,10 @@ export function setupEditor(initialDoc) {
 
 export function getEditorView() {
   return editorView;
+}
+
+export function getCurrentParsedData() {
+  return currentParsedData;
 }
 
 export function highlightNodeInEditor(nodeId) {
