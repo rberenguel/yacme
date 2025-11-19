@@ -99,6 +99,7 @@ export function createStandaloneHTML(
     </style>
 </head>
 <body>
+    <div class="container view-only present-mode">
     <div class="diagram-pane">
         <svg id="diagram-container">
             <defs>
@@ -121,7 +122,8 @@ export function createStandaloneHTML(
             </button>
         </div>
     </div>
-    
+    </div>
+
     <script>${d3Content}</script>
     <script>${dagreContent}</script>
     

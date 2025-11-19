@@ -72,8 +72,10 @@ export function setPresentMode(enabled) {
   const editorPane = document.getElementById("editor-pane");
   const resizer = document.getElementById("resizer");
   const slideControls = document.getElementById("slide-controls");
+  const container = document.querySelector(".container");
 
   if (enabled) {
+    if (container) container.classList.add("present-mode");
     editorPane.style.display = "none";
     resizer.style.display = "none";
     if (slideControls) slideControls.style.display = "flex";
@@ -86,6 +88,7 @@ export function setPresentMode(enabled) {
       simulation.alpha(0.3).restart();
     }
   } else {
+    if (container) container.classList.remove("present-mode");
     editorPane.style.display = "flex";
     resizer.style.display = "block";
     if (slideControls) slideControls.style.display = "none";
@@ -594,13 +597,18 @@ export function updateDiagram(newData) {
     }
   });
 
-  nodeSelection.attr(
-    "class",
-    (d) =>
-      `node ${d.prose ? "prose-node" : ""} ${
-        d.expanded ? "expanded-node" : ""
-      } ${d.directives?.nodeClass || ""}`,
-  );
+  nodeSelection
+    .attr(
+      "class",
+      (d) =>
+        `node ${d.prose ? "prose-node" : ""} ${
+          d.expanded ? "expanded-node" : ""
+        } ${d.directives?.nodeClass || ""}`,
+    )
+    .style(
+      "--hover-shadow-color",
+      (d) => d.directives?.hoverShadowColor || null,
+    );
 
   // Create or update arrow markers for custom colors
   const defs = svg.select("defs");
@@ -635,6 +643,10 @@ export function updateDiagram(newData) {
     .join("path")
     .attr("class", (d) => `link ${d.directives?.nodeClass || ""}`)
     .attr("style", (d) => d.directives?.nodeStyle || null)
+    .style(
+      "--hover-shadow-color",
+      (d) => d.directives?.hoverShadowColor || null,
+    )
     .attr("marker-end", (d) => {
       if (d.directives?.arrow === "none") return null;
       if (d.directives?.arrowColor) {

@@ -22,6 +22,7 @@ export function parseCompactFormat(text) {
     labelStyle: "",
     edgeStyle: "",
     edgeLabelStyle: "",
+    hoverShadowColor: "", // hover shadow color for present mode
     charWidth: "9", // pixels per character for node width
     lineHeight: "18", // pixels per line for node height
     baseHeight: "50", // base height in pixels
@@ -37,6 +38,9 @@ export function parseCompactFormat(text) {
       }
       if (defaultStyles.labelStyle) {
         node.directives.labelStyle = defaultStyles.labelStyle;
+      }
+      if (defaultStyles.hoverShadowColor) {
+        node.directives.hoverShadowColor = defaultStyles.hoverShadowColor;
       }
       // Apply default sizing parameters
       if (defaultStyles.charWidth) {
@@ -74,6 +78,8 @@ export function parseCompactFormat(text) {
       if (directives.edgeStyle) defaultStyles.edgeStyle = directives.edgeStyle;
       if (directives.edgeLabelStyle)
         defaultStyles.edgeLabelStyle = directives.edgeLabelStyle;
+      if (directives.hoverShadowColor)
+        defaultStyles.hoverShadowColor = directives.hoverShadowColor;
       if (directives.charWidth) defaultStyles.charWidth = directives.charWidth;
       if (directives.lineHeight)
         defaultStyles.lineHeight = directives.lineHeight;
@@ -233,6 +239,9 @@ export function parseCompactFormat(text) {
       } else if (defaultStyles.edgeLabelStyle && directives.labelStyle) {
         edgeDirectives.labelStyle =
           defaultStyles.edgeLabelStyle + "; " + directives.labelStyle;
+      }
+      if (defaultStyles.hoverShadowColor && !directives.hoverShadowColor) {
+        edgeDirectives.hoverShadowColor = defaultStyles.hoverShadowColor;
       }
 
       ensureNode(sourceId);
