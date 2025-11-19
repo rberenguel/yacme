@@ -205,13 +205,30 @@ export async function exportStandaloneHTML() {
       cssContent,
       diagramJsContent,
       quizJsContent,
+      iconoirCssContent,
+      iconoirFontBlob,
     ] = await Promise.all([
       fetch("libs/d3v7.js").then((res) => res.text()),
       fetch("libs/dagre.js").then((res) => res.text()),
       fetch("style.css").then((res) => res.text()),
       fetch("js/modules/diagram.js").then((res) => res.text()),
       fetch("js/modules/quiz.js").then((res) => res.text()),
+      fetch("fonts/iconoir/iconoir-font.css").then((res) => res.text()),
+      fetch("fonts/iconoir/iconoir.woff2").then((res) => res.blob()),
     ]);
+
+    // Convert font to base64 for embedding
+    const fontBase64 = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result.split(",")[1]);
+      reader.readAsDataURL(iconoirFontBlob);
+    });
+
+    // Replace the font URL with inline base64 data
+    const inlinedIconoirCss = iconoirCssContent.replace(
+      /url\("\.\/iconoir\.woff2"\)/g,
+      `url("data:font/woff2;base64,${fontBase64}")`,
+    );
 
     const htmlContent = createStandaloneHTML(
       exportData,
@@ -220,6 +237,7 @@ export async function exportStandaloneHTML() {
       diagramJsContent,
       cssContent,
       quizJsContent,
+      inlinedIconoirCss,
     );
 
     if (window.showSaveFilePicker) {

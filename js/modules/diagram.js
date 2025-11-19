@@ -358,16 +358,19 @@ function ticked() {
 
 function drag(simulation) {
   function dragstarted(event, d) {
+    if (event.sourceEvent.button !== 0) return; // Only left click
     if (!event.active) simulation.alphaTarget(0.1).restart();
     d.fx = d.x;
     d.fy = d.y;
     d3.select(this).classed("grabbing", true);
   }
   function dragged(event, d) {
+    if (event.sourceEvent.button !== 0) return; // Only left click
     d.fx = event.x;
     d.fy = event.y;
   }
   function dragended(event, d) {
+    if (event.sourceEvent.button !== 0) return; // Only left click
     if (!event.active) simulation.alphaTarget(0);
     d3.select(this).classed("grabbing", false);
   }
@@ -382,7 +385,12 @@ const zoom = d3
   .zoom()
   .scaleExtent([0.001, 3])
   .on("zoom", ({ transform }) => zoomGroup.attr("transform", transform))
-  .filter((event) => !event.target.closest(".prose-content"));
+  .filter((event) => {
+    // Don't zoom/pan on prose content or non-left clicks
+    if (event.target.closest(".prose-content")) return false;
+    if (event.type === "mousedown" && event.button !== 0) return false;
+    return true;
+  });
 svg.call(zoom).call(zoom.scaleTo, 0.8);
 
 export function updateDiagram(newData) {

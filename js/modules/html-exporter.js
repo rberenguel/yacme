@@ -1,4 +1,4 @@
-function processModuleContent(moduleContent) {
+function processModuleContent(moduleContent, iconMapData = null) {
   // 1. Remove import statements more robustly
   let processed = moduleContent.replace(/^import .* from ['"].*['"];$/gm, "");
   // 2. Remove export statements, but keep the function/variable declaration
@@ -9,6 +9,13 @@ function processModuleContent(moduleContent) {
     "(() => {})($1)",
   );
   processed = processed.replace(/clearHighlightInEditor\(\)/g, "() => {}");
+  // 4. If iconMapData is provided, replace the empty iconMap initialization
+  if (iconMapData) {
+    processed = processed.replace(
+      /let iconMap = \{\};/g,
+      `let iconMap = ${JSON.stringify(iconMapData)};`,
+    );
+  }
   return processed;
 }
 
@@ -19,9 +26,28 @@ export function createStandaloneHTML(
   diagramJsContent,
   cssContent,
   quizJsContent,
+  iconoirCssContent = "",
 ) {
   const dataString = JSON.stringify(diagramData, null, 2);
-  const processedDiagramJs = processModuleContent(diagramJsContent);
+
+  // Parse icon map from iconoir CSS first
+  const parsedIconMap = {};
+  if (iconoirCssContent) {
+    const iconRegex =
+      /\.iconoirfont-([a-zA-Z0-9\-]+)::before\s*{\s*content:\s*["']\\([0-9a-fA-F]+)["'];\s*}/g;
+    let match;
+    while ((match = iconRegex.exec(iconoirCssContent)) !== null) {
+      const iconName = match[1];
+      const unicodeHex = match[2];
+      const character = String.fromCharCode(parseInt(unicodeHex, 16));
+      parsedIconMap[iconName] = character;
+    }
+  }
+
+  const processedDiagramJs = processModuleContent(
+    diagramJsContent,
+    parsedIconMap,
+  );
   const processedQuizJs = processModuleContent(quizJsContent);
 
   return `
@@ -32,22 +58,25 @@ export function createStandaloneHTML(
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Exported Concept Map</title>
     <style>
+        /* Iconoir icon font */
+        ${iconoirCssContent}
+
         /* Base styles for standalone export */
-        body, html { 
-            margin: 0; 
-            padding: 0; 
-            overflow: hidden; 
-            width: 100%; 
-            height: 100%; 
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
-        .diagram-pane { 
-            width: 100vw !important; 
-            height: 100vh !important; 
+        .diagram-pane {
+            width: 100vw !important;
+            height: 100vh !important;
         }
-        #diagram-container { 
-            width: 100%; 
-            height: 100%; 
+        #diagram-container {
+            width: 100%;
+            height: 100%;
         }
         /* Include the full application CSS */
         ${cssContent}
@@ -84,12 +113,14 @@ export function createStandaloneHTML(
         const diagramData = ${dataString};
 
         // The links in the exported data need to be re-hydrated to reference the actual node objects.
-        const nodeMap = new Map(diagramData.nodes.map(n => [n.id, n]));
+        const nodeMapData = new Map(diagramData.nodes.map(n => [n.id, n]));
         diagramData.links.forEach(link => {
-            link.source = nodeMap.get(link.source.id || link.source);
-            link.target = nodeMap.get(link.target.id || link.target);
+            link.source = nodeMapData.get(link.source.id || link.source);
+            link.target = nodeMapData.get(link.target.id || link.target);
         });
-        
+
+        // Icon map is already baked into the processed diagram.js code
+
         // Kick off the diagram rendering and simulation
         updateDiagram(diagramData.nodes);
 
