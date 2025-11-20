@@ -513,9 +513,9 @@ export function updateDiagram(newData) {
       });
     }
   } else {
-    // No slide filtering, show everything
-    nodes = allNodes;
-    links = allLinks;
+    // No slide filtering - hide slide-only content in main view
+    nodes = allNodes.filter((n) => n.directives?.slideOnly !== "true");
+    links = allLinks.filter((link) => link.directives?.slideOnly !== "true");
   }
   const g = new dagre.graphlib.Graph();
   g.setGraph({ rankdir: "TB", marginx: 20, marginy: 20 });

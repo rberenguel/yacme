@@ -200,7 +200,15 @@ export function parseCompactFormat(text) {
     }
 
     if (trimmedLine.includes("->")) {
-      const [sourcePart, targetPartWithDirectives] = trimmedLine
+      // Check for * prefix indicating slide-only edge
+      let edgeLine = trimmedLine;
+      let isSlideOnlyEdge = false;
+      if (edgeLine.trim().startsWith("*")) {
+        isSlideOnlyEdge = true;
+        edgeLine = edgeLine.trim().substring(1).trim();
+      }
+
+      const [sourcePart, targetPartWithDirectives] = edgeLine
         .split("->")
         .map((s) => s.trim());
 
@@ -224,6 +232,11 @@ export function parseCompactFormat(text) {
       const targetId = targetWords.shift();
       const verb = targetWords.join(" ");
       const directives = parseDirectives(directiveString);
+
+      // Mark as slide-only if * prefix was used
+      if (isSlideOnlyEdge) {
+        directives.slideOnly = "true";
+      }
 
       // Apply default edge styles
       const edgeDirectives = { ...directives };
@@ -264,6 +277,12 @@ export function parseCompactFormat(text) {
       directiveString = "";
     }
 
+    // Check for * prefix indicating slide-only node
+    const isSlideOnly = definitionPart.startsWith("*");
+    if (isSlideOnly) {
+      definitionPart = definitionPart.substring(1).trim();
+    }
+
     const parts = definitionPart.split(/\s+/);
     const nodeId = parts.shift();
     const title = parts.join(" ");
@@ -272,6 +291,11 @@ export function parseCompactFormat(text) {
       const node = ensureNode(nodeId);
       if (title) node.title = title;
       const userDirectives = parseDirectives(directiveString);
+
+      // Mark as slide-only if * prefix was used
+      if (isSlideOnly) {
+        userDirectives.slideOnly = "true";
+      }
 
       // Merge user directives with defaults (user overrides)
       if (userDirectives.nodeStyle && node.directives.nodeStyle) {

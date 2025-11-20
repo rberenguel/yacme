@@ -30,6 +30,9 @@ A -> B connects to ; nodeStyle="stroke: #2aa198; stroke-width: 3;" arrowColor="#
 B -> C enables ; nodeStyle="stroke: #268bd2; stroke-dasharray: 5,5;" arrowColor="#268bd2"
 A -> C direct ; arrow="none" nodeStyle="stroke: #dc322f; stroke-dasharray: 2,2;"
 
+*D Only in a slide
+*D -> A
+
 # SLIDES
 
 Welcome
@@ -49,6 +52,7 @@ A -> B
 +Welcome
 C
 B -> C
+D -> A
 
 ---
 

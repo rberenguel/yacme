@@ -1,0 +1,45 @@
+- nodeStyle="fill: #1a1a2e; stroke: #2aa198;"
+- labelStyle="fill: #93a1a1;"
+
+A Main Concept A
+B Normal Node B
+*C Slide Only Node (prefix)
+D Slide Only Node (directive) ; slideOnly="true"
+E Another Main Node
+
+A -> B normal edge
+A -> E main connection
+*B -> C slide-only edge (prefix)
+B -> D hidden edge ; slideOnly="true"
+C -> D connects hidden nodes
+
+# SLIDES
+
+A
+E
+A -> E
+---
+A
+B
+E
+A -> B
+A -> E
+---
+A
+B
+C
+E
+A -> B
+A -> E
+B -> C
+---
+A
+B
+C
+D
+E
+A -> B
+A -> E
+B -> C
+B -> D
+C -> D
