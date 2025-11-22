@@ -217,3 +217,48 @@ svg {
     drop-shadow(0 0 30px var(--hover-shadow-color, #b58900));
   stroke-width: 4px;
 }
+
+/* Highlight effect for slides (using ! prefix) */
+/* Level 1: Yellow (!) */
+.slide-highlight-1 rect {
+  filter: drop-shadow(0 0 10px #b58900) drop-shadow(0 0 20px #b58900) !important;
+}
+
+.link.slide-highlight-1 {
+  filter: drop-shadow(0 0 10px #b58900) drop-shadow(0 0 20px #b58900)
+    drop-shadow(0 0 30px #b58900) !important;
+  stroke-width: 4px !important;
+}
+
+/* Level 2: Blue (!!) */
+.slide-highlight-2 rect {
+  filter: drop-shadow(0 0 10px #268bd2) drop-shadow(0 0 20px #268bd2) !important;
+}
+
+.link.slide-highlight-2 {
+  filter: drop-shadow(0 0 10px #268bd2) drop-shadow(0 0 20px #268bd2)
+    drop-shadow(0 0 30px #268bd2) !important;
+  stroke-width: 4px !important;
+}
+
+/* Level 3: Red (!!!) */
+.slide-highlight-3 rect {
+  filter: drop-shadow(0 0 10px #dc322f) drop-shadow(0 0 20px #dc322f) !important;
+}
+
+.link.slide-highlight-3 {
+  filter: drop-shadow(0 0 10px #dc322f) drop-shadow(0 0 20px #dc322f)
+    drop-shadow(0 0 30px #dc322f) !important;
+  stroke-width: 4px !important;
+}
+
+/* Level 4: Green (!!!!) */
+.slide-highlight-4 rect {
+  filter: drop-shadow(0 0 10px #859900) drop-shadow(0 0 20px #859900) !important;
+}
+
+.link.slide-highlight-4 {
+  filter: drop-shadow(0 0 10px #859900) drop-shadow(0 0 20px #859900)
+    drop-shadow(0 0 30px #859900) !important;
+  stroke-width: 4px !important;
+}

@@ -1,0 +1,148 @@
+- nodeStyle="fill: #1a1a2e; stroke: #2aa198;"
+- labelStyle="fill: #93a1a1;"
+- edgeStyle="stroke: #586e75; stroke-width: 1;"
+- edgeLabelStyle="fill: #657b83; font-size: 11px;"
+
+# Topics
+
+The main abstraction in Kafka. Topics are feeds of messages that producers write to and consumers read from.
+
+---
+
+# Partitions
+
+Topics are divided into partitions for scalability and parallelism. Each partition is an ordered, immutable sequence of records.
+
+---
+
+# Records
+
+Individual messages in Kafka. Each record consists of a key, a value, a timestamp, and optional headers.
+
+---
+
+# Consumers
+
+
+Applications that read data from Kafka topics. Consumers can be organized into consumer groups for parallel processing.
+
+---
+
+# Offset
+
+A unique sequential ID assigned to each record within a partition. Consumers use offsets to track their position in the log.
+
+---
+
+Topics Kafka Topics
+Internal __Internal Topics ; nodeStyle="fill: #073642; stroke: #268bd2;"
+User User Topics ; nodeStyle="fill: #073642; stroke: #859900;"
+Partitions Partitions
+Records Records
+Ordered Ordered ; nodeStyle="fill: #073642; stroke: #b58900;"
+kv Key-value
+Tombstone Tombstone ; nodeStyle="fill: #073642; stroke: #dc322f;"
+sk Same key
+sp Same partition ; nodeStyle="fill: #073642; stroke: #6c71c4;"
+Compaction Compaction
+Time Timestamp
+Expiration Expiration
+ret Record expiration time ; nodeStyle="fill: #002b36; stroke: #586e75; stroke-dasharray: 2,2;" labelStyle="fill: #586e75; font-size: 11px;"
+cg Consumer groups
+Consumers Consumers
+Offset Offset ; nodeStyle="fill: #073642; stroke: #cb4b16;"
+
+Topics -> Internal can be ; nodeStyle="stroke: #268bd2;"
+Topics -> User can be ; nodeStyle="stroke: #859900;"
+Topics -> Partitions have
+cg -> Consumers have
+User -> cg consumed by
+Partitions -> Records contain
+Partitions -> Consumers read from
+Consumers -> Topics can read from several ; arrowColor="#2aa198"
+Records -> Ordered are partially
+Records -> kv are
+kv -> Tombstone value=null ; nodeStyle="stroke: #dc322f;"
+kv -> sk can have
+sk -> sp go to
+Compaction -> sk keeps latest with
+Time -> Compaction required by
+Time -> Expiration required by
+Expiration -> ret ; nodeStyle="stroke-dasharray: 5,5; stroke: #586e75;"
+Records -> Time have
+Records -> sk can have
+Ordered -> Time by
+Consumers -> Offset start at
+Consumers -> Offset keep track of
+Offset -> Internal is stored in ; nodeStyle="stroke: #268bd2;"
+Offset -> Ordered requires
+sp -> Ordered is completely ; arrowColor="#2aa198"
+
+# SLIDES
+
+Topics (54, 43)
+---
+Internal (39, 34)
+User (72, 34)
+Topics -> Internal
+Topics -> User
+---
+Partitions (54, 56)
+Topics -> Partitions
+---
+Records (54, 72)
+Partitions -> Records
+---
+Ordered (64, 78)
+Records -> Ordered
+kv (41, 78)
+Records -> kv
+---
+Time (65, 63)
+Records -> Time
+Ordered -> Time
+---
+sk (33, 63)
+kv -> sk
+Records -> sk
+---
+sp (31, 97)
+sk -> sp
+sp -> Ordered
+---
+Tombstone (35, 88)
+kv -> Tombstone
+---
+Compaction (18, 52)
+Time -> Compaction
+Compaction -> sk
+---
+Expiration (65, 50)
+Time -> Expiration
+ret (80, 45)
+Expiration -> ret
+---
+-Topics
+-Internal
+-User
+-Topics -> Internal
+-Topics -> User
+-Topics -> Partitions
+Consumers (39, 41)
+Partitions -> Consumers
+Consumers -> Topics
+---
+cg (59, 28)
+User (75, 35)
+Topics (50, 15)
+User -> cg
+cg -> Consumers
+---
+Offset (101, 73)
+Consumers -> Offset
+Consumers -> Offset
+Offset -> Ordered
+---
+Internal (91, 12)
+Topics -> Internal
+Offset -> Internal

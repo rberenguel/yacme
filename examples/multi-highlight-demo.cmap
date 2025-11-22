@@ -1,0 +1,35 @@
+Priority Priority Levels
+Low Low Priority
+Medium Medium Priority
+High High Priority
+Critical Critical Priority
+
+Priority -> Low
+Priority -> Medium
+Priority -> High
+Priority -> Critical
+
+# SLIDES
+
+Priority (50, 10)
+Low (20, 40)
+Medium (40, 60)
+High (60, 60)
+Critical (80, 40)
+---
+Priority -> Low
+Priority -> Medium
+Priority -> High
+Priority -> Critical
+---
+!Low (20, 40)
+!Priority -> Low
+---
+!!Medium (40, 60)
+!!Priority -> Medium
+---
+!!!High (60, 60)
+!!!Priority -> High
+---
+!!!!Critical (80, 40)
+!!!!Priority -> Critical

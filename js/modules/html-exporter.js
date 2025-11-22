@@ -167,6 +167,15 @@ export function createStandaloneHTML(
         // Kick off the diagram rendering and simulation
         updateDiagram(diagramData.nodes);
 
+        // Check URL parameters for auto-starting presentation mode
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('preso') && hasSlides()) {
+            // Small delay to ensure diagram is rendered before entering present mode
+            setTimeout(() => {
+                setPresentMode(true);
+            }, 100);
+        }
+
         // Add keydown listener for quiz and presentation mode
         let isQuizActive = false;
         window.addEventListener("keydown", (e) => {

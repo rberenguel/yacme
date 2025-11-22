@@ -10,10 +10,14 @@ Following the trails of [Garbuix](https://github.com/rberenguel/garbuix) and oth
 - 📝 **Simple Syntax**: Text-based format that's easy to learn and version control
 - 🎯 **Interactive Nodes**: Expandable sections with prose content
 - 🎬 **Presentation Mode**: Create slides that progressively reveal your diagram
+- 📍 **Positioned Slides**: Place nodes exactly where you want them with percentage-based coordinates
+- ✨ **Multi-Level Highlighting**: Draw attention with 4 color-coded highlight levels
+- 🎯 **Drag-to-Position**: Reposition nodes in present mode and auto-update the source
 - 🔗 **Clickable Links**: Add URLs to nodes and edges
 - 🎨 **Customizable Styling**: Inline CSS and class-based styling
 - 🔍 **Icon Support**: Embed Iconoir icons in labels
 - 💾 **Persistence**: Save/load diagrams to local storage
+- 📤 **Export**: Create standalone HTML presentations with ?preso URL parameter
 
 ## Quick Start
 
@@ -254,10 +258,27 @@ A
 B
 ```
 
+**Position nodes (percentage-based):**
+
+```
+A (25, 50)
+B (75, 50)
+```
+
 **Add edges:**
 
 ```
 A -> B
+```
+
+**Highlight nodes/edges (4 levels with different colors):**
+
+```
+!A           # Yellow highlight
+!!B          # Blue highlight
+!!!C         # Red highlight
+!!!!D        # Green highlight
+!A -> B      # Highlighted edge
 ```
 
 **Remove items (from this slide onward):**
@@ -279,6 +300,13 @@ A -> B
 ~Welcome
 ```
 
+Prefixes can be combined with positioning:
+
+```
+!A (50, 50)      # Yellow highlight at center
++Welcome (50, 10) # Auto-expanded at top
+```
+
 ### Slide Behavior
 
 - **Incremental**: Each slide includes everything from previous slides
@@ -286,6 +314,10 @@ A -> B
 - **Edge nodes**: Nodes in edges are automatically included
 - **Exclusions**: `-` prefix removes items going forward
 - **Expand state**: `+` expands prose nodes, `~` collapses them (useful after a `+` in previous slide)
+- **Position inheritance**: Positions persist across slides unless overridden
+- **Highlights**: Non-cumulative - only apply to the current slide
+- **Drag-to-position**: In present mode, drag nodes to update their positions in the source text
+- **URL parameter**: Add `?preso` to auto-start in presentation mode
 
 ### Complete Slides Example
 

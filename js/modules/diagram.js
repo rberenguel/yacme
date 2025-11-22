@@ -1,6 +1,10 @@
 // js/modules/diagram.js
 
-import { highlightNodeInEditor, clearHighlightInEditor } from "./editor.js";
+import {
+  highlightNodeInEditor,
+  clearHighlightInEditor,
+  updateNodePositionInEditor,
+} from "./editor.js";
 const svg = d3.select("#diagram-container");
 const svgElement = document.querySelector(".diagram-pane");
 let width = svgElement.clientWidth;
@@ -32,11 +36,13 @@ export function setIconMap(map) {
 /**
  * Sets the slide context for filtering the diagram.
  * @param {Array} slides - Cumulative slides array
- * @param {number} slideIndex - Current slide index (null for full graph)
+ * @param {number} slideIndex - Current slide index (null for full graph, undefined to keep current)
  */
 export function setSlideContext(slides, slideIndex) {
   allSlides = slides;
-  currentSlideIndex = slideIndex;
+  if (slideIndex !== undefined) {
+    currentSlideIndex = slideIndex;
+  }
 }
 
 /**
@@ -79,14 +85,20 @@ export function setPresentMode(enabled) {
     editorPane.style.display = "none";
     resizer.style.display = "none";
     if (slideControls) slideControls.style.display = "flex";
-    if (allSlides && allSlides.length > 0) {
-      currentSlideIndex = 0;
-      // Force diagram update by triggering a re-layout
-      const currentNodes = nodes.slice(); // Keep reference to current nodes
-      updateDiagramFromSlide();
-      // Restart simulation briefly to adjust layout
-      simulation.alpha(0.3).restart();
-    }
+
+    // Update viewport dimensions BEFORE rendering
+    setTimeout(() => {
+      width = svgElement.clientWidth;
+      height = svgElement.clientHeight;
+
+      if (allSlides && allSlides.length > 0) {
+        currentSlideIndex = 0;
+        // Force diagram update with new dimensions
+        updateDiagramFromSlide();
+        // Restart simulation briefly to adjust layout
+        simulation.alpha(0.3).restart();
+      }
+    }, 0);
   } else {
     if (container) container.classList.remove("present-mode");
     editorPane.style.display = "flex";
@@ -434,6 +446,34 @@ function drag(simulation) {
     if (event.sourceEvent.button !== 0) return; // Only left click
     if (!event.active) simulation.alphaTarget(0);
     d3.select(this).classed("grabbing", false);
+
+    // If in present mode, update the slide text with new position
+    if (presentMode && currentSlideIndex !== null && allSlides) {
+      // Convert pixel position to percentage
+      const percentX = Math.round((d.fx / width) * 100);
+      const percentY = Math.round((d.fy / height) * 100);
+
+      // Find the most recent slide where this node was explicitly added
+      // (not just visible from a previous slide)
+      // This handles the case where a node is excluded and re-added
+      let targetSlideIndex = currentSlideIndex;
+
+      // Walk backwards from current slide to find the last explicit addition
+      for (let i = currentSlideIndex; i >= 0; i--) {
+        const slideData = allSlides[i];
+        if (slideData.visibleNodes.includes(d.id)) {
+          targetSlideIndex = i;
+          // Keep searching backwards - we want the most recent explicit add
+          // Check if this node was NOT visible in the previous slide
+          if (i === 0 || !allSlides[i - 1].visibleNodes.includes(d.id)) {
+            // This is where it was (re-)added
+            break;
+          }
+        }
+      }
+
+      updateNodePositionInEditor(d.id, percentX, percentY, targetSlideIndex);
+    }
   }
   return d3
     .drag()
@@ -475,6 +515,7 @@ export function updateDiagram(newData) {
   });
 
   // Filter by current slide if applicable
+  // Use the module-level currentSlideIndex to get the slide context
   const currentSlide = getCurrentSlide();
   if (currentSlide && currentSlideIndex !== null) {
     const visibleNodeIds = new Set(currentSlide.visibleNodes);
@@ -528,12 +569,27 @@ export function updateDiagram(newData) {
   );
   dagre.layout(g);
 
+  // Apply positions from slide if available
+  const slideData = getCurrentSlide();
+  const slidePositions = slideData?.nodePositions || {};
+
   nodes.forEach((node) => {
-    const nodeInfo = g.node(node.id);
-    if (nodeInfo) {
-      if (!node.x) {
-        node.x = nodeInfo.x + width / 2 - g.graph().width / 2;
-        node.y = nodeInfo.y + height / 2 - g.graph().height / 2;
+    // Check if this node has a position defined in the current slide
+    if (slidePositions[node.id]) {
+      const pos = slidePositions[node.id];
+      // Convert percentage to pixel coordinates
+      node.x = (pos.x / 100) * width;
+      node.y = (pos.y / 100) * height;
+      // Set fixed position so force simulation doesn't move it
+      node.fx = node.x;
+      node.fy = node.y;
+    } else {
+      const nodeInfo = g.node(node.id);
+      if (nodeInfo) {
+        if (!node.x) {
+          node.x = nodeInfo.x + width / 2 - g.graph().width / 2;
+          node.y = nodeInfo.y + height / 2 - g.graph().height / 2;
+        }
       }
     }
   });
@@ -608,14 +664,28 @@ export function updateDiagram(newData) {
     }
   });
 
+  // Apply highlight class based on current slide
+  const currentSlideData = getCurrentSlide();
+  const highlightNodesData = currentSlideData?.highlightNodes || [];
+
+  // Build a map of nodeId to highlight level
+  const highlightNodeMap = new Map();
+  highlightNodesData.forEach((item) => {
+    const nodeId = typeof item === "string" ? item : item.nodeId;
+    const level = typeof item === "string" ? 1 : item.level;
+    highlightNodeMap.set(nodeId, level);
+  });
+
   nodeSelection
-    .attr(
-      "class",
-      (d) =>
-        `node ${d.prose ? "prose-node" : ""} ${
-          d.expanded ? "expanded-node" : ""
-        } ${d.directives?.nodeClass || ""}`,
-    )
+    .attr("class", (d) => {
+      const level = highlightNodeMap.get(d.id);
+      const highlightClass = level
+        ? `slide-highlight slide-highlight-${level}`
+        : "";
+      return `node ${d.prose ? "prose-node" : ""} ${
+        d.expanded ? "expanded-node" : ""
+      } ${highlightClass} ${d.directives?.nodeClass || ""}`;
+    })
     .style(
       "--hover-shadow-color",
       (d) => d.directives?.hoverShadowColor || null,
@@ -648,6 +718,15 @@ export function updateDiagram(newData) {
     }
   });
 
+  // Build map of highlighted edges with levels
+  const highlightEdgesData = currentSlideData?.highlightEdges || [];
+  const highlightEdgeMap = new Map();
+  highlightEdgesData.forEach((item) => {
+    const edgeStr = typeof item === "string" ? item : item.edge;
+    const level = typeof item === "string" ? 1 : item.level;
+    highlightEdgeMap.set(edgeStr, level);
+  });
+
   linksGroup
     .selectAll("path.link")
     .data(links, (d) => `${d.source.id || d.source}-${d.target.id || d.target}`)
@@ -663,7 +742,26 @@ export function updateDiagram(newData) {
           .call((path) => path.transition().duration(300).style("opacity", 0))
           .remove(),
     )
-    .attr("class", (d) => `link ${d.directives?.nodeClass || ""}`)
+    .attr("class", (d) => {
+      // Check if this edge is highlighted and get level
+      const sourceId = d.source.id || d.source;
+      const targetId = d.target.id || d.target;
+      let highlightLevel = 0;
+
+      for (const [edgeStr, level] of highlightEdgeMap) {
+        const [src, tgt] = edgeStr.split("->").map((s) => s.trim());
+        const tgtId = tgt.split(/\s+/)[0];
+        if (src === sourceId && tgtId === targetId) {
+          highlightLevel = level;
+          break;
+        }
+      }
+
+      const highlightClass = highlightLevel
+        ? `slide-highlight slide-highlight-${highlightLevel}`
+        : "";
+      return `link ${highlightClass} ${d.directives?.nodeClass || ""}`;
+    })
     .attr("style", (d) => d.directives?.nodeStyle || null)
     .style(
       "--hover-shadow-color",

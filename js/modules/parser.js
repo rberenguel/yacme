@@ -139,6 +139,8 @@ export function parseCompactFormat(text) {
           excludeEdges: [],
           autoExpandNodes: [],
           autoCollapseNodes: [],
+          highlightNodes: [],
+          highlightEdges: [],
           lineStart: lineNumber + 1,
         };
         continue;
@@ -152,6 +154,48 @@ export function parseCompactFormat(text) {
           currentSlide.excludeEdges.push(content);
         } else {
           currentSlide.excludeNodes.push(content);
+        }
+      } else if (trimmedLine.match(/^!+/)) {
+        // Highlight node or edge (!, !!, !!!, !!!!)
+        const exclamationCount = trimmedLine.match(/^!+/)[0].length;
+        const level = Math.min(exclamationCount, 4); // Max 4 levels
+        const content = trimmedLine.substring(exclamationCount).trim();
+
+        if (content.includes("->")) {
+          // Highlight edge
+          currentSlide.highlightEdges.push({ edge: content, level });
+          // Also add the edge to visible edges
+          if (!currentSlide.edges.includes(content)) {
+            currentSlide.edges.push(content);
+          }
+        } else {
+          // Highlight node (possibly with position)
+          const positionMatch = content.match(
+            /^(\S+)\s*\((\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\)$/,
+          );
+          if (positionMatch) {
+            const nodeId = positionMatch[1];
+            const posX = parseFloat(positionMatch[2]);
+            const posY = parseFloat(positionMatch[3]);
+
+            currentSlide.highlightNodes.push({ nodeId, level });
+
+            // Initialize positions map if needed
+            if (!currentSlide.nodePositions) {
+              currentSlide.nodePositions = {};
+            }
+            currentSlide.nodePositions[nodeId] = { x: posX, y: posY };
+
+            if (!currentSlide.nodes.includes(nodeId)) {
+              currentSlide.nodes.push(nodeId);
+            }
+          } else {
+            // Regular highlight without position
+            currentSlide.highlightNodes.push({ nodeId: content, level });
+            if (!currentSlide.nodes.includes(content)) {
+              currentSlide.nodes.push(content);
+            }
+          }
         }
       } else if (trimmedLine[0] === "+") {
         // Auto-expand node
@@ -171,8 +215,37 @@ export function parseCompactFormat(text) {
         // Edge reference
         currentSlide.edges.push(trimmedLine);
       } else {
-        // Node reference
-        currentSlide.nodes.push(trimmedLine);
+        // Node reference (possibly with position)
+        // Check for position syntax: NodeId (x, y)
+        const positionMatch = trimmedLine.match(
+          /^([+~]?)(\S+)\s*\((\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\)$/,
+        );
+        if (positionMatch) {
+          const prefix = positionMatch[1];
+          const nodeId = positionMatch[2];
+          const posX = parseFloat(positionMatch[3]);
+          const posY = parseFloat(positionMatch[4]);
+
+          // Handle prefixes
+          if (prefix === "+") {
+            currentSlide.autoExpandNodes.push(nodeId);
+          } else if (prefix === "~") {
+            currentSlide.autoCollapseNodes.push(nodeId);
+          }
+
+          // Initialize positions map if needed
+          if (!currentSlide.nodePositions) {
+            currentSlide.nodePositions = {};
+          }
+          currentSlide.nodePositions[nodeId] = { x: posX, y: posY };
+
+          if (!currentSlide.nodes.includes(nodeId)) {
+            currentSlide.nodes.push(nodeId);
+          }
+        } else {
+          // Regular node reference without position
+          currentSlide.nodes.push(trimmedLine);
+        }
       }
       continue;
     }
@@ -352,6 +425,7 @@ export function computeCumulativeSlides(slides, allNodes) {
   let cumulativeEdges = new Set();
   let autoExpandNodes = new Set();
   let autoCollapseNodes = new Set();
+  let nodePositions = {}; // Track positions cumulatively
 
   for (const slide of slides) {
     // Add new nodes
@@ -376,6 +450,15 @@ export function computeCumulativeSlides(slides, allNodes) {
       autoExpandNodes.delete(nodeId); // Remove from expand if collapsing
     });
 
+    // Merge node positions (later slides can override)
+    if (slide.nodePositions) {
+      nodePositions = { ...nodePositions, ...slide.nodePositions };
+    }
+
+    // Highlights are NOT cumulative - only apply to current slide
+    const highlightNodes = slide.highlightNodes || [];
+    const highlightEdges = slide.highlightEdges || [];
+
     // Parse edges to extract node IDs
     const edgeNodeIds = new Set();
     cumulativeEdges.forEach((edgeStr) => {
@@ -396,6 +479,9 @@ export function computeCumulativeSlides(slides, allNodes) {
       visibleEdges: Array.from(cumulativeEdges),
       autoExpandNodes: Array.from(autoExpandNodes),
       autoCollapseNodes: Array.from(autoCollapseNodes),
+      highlightNodes: highlightNodes, // Not cumulative
+      highlightEdges: highlightEdges, // Not cumulative
+      nodePositions: { ...nodePositions }, // Copy of cumulative positions
       lineStart: slide.lineStart,
       lineEnd: slide.lineEnd,
     });

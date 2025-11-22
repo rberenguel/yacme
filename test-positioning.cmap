@@ -1,0 +1,16 @@
+A First Node
+B Second Node
+C Third Node
+
+A -> B connects
+B -> C leads to
+
+# SLIDES
+
+A (25, 30)
+---
+B (75, 50)
+A -> B
+---
+C (50, 70)
+B -> C

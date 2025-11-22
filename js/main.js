@@ -33,6 +33,17 @@ async function initializeApp() {
   updateDiagram(parseCompactFormat(compactDiagramData).nodes);
   initSlideControls(); // Initialize slide navigation buttons
   openLastFile();
+
+  // Check URL parameters for auto-starting presentation mode
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has("preso")) {
+    // Small delay to ensure diagram is rendered and slides are loaded
+    setTimeout(() => {
+      if (hasSlides()) {
+        setPresentMode(true);
+      }
+    }, 200);
+  }
 }
 
 initializeApp();
