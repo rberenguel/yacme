@@ -20,6 +20,7 @@ import {
   openLastFile,
   newFile,
   exportStandaloneHTML,
+  exportSlidesAsSVG,
 } from "./modules/file.js";
 import { compactDiagramData } from "./modules/initial-data.js";
 import { loadIconMap } from "./modules/icon-map-loader.js";
@@ -67,7 +68,12 @@ window.addEventListener("keydown", (e) => {
   }
   if (e.metaKey && !e.ctrlKey && e.key === "e") {
     e.preventDefault();
-    exportStandaloneHTML();
+    // Modal behavior: export SVG slides if in present mode, otherwise export HTML
+    if (isPresentMode()) {
+      exportSlidesAsSVG();
+    } else {
+      exportStandaloneHTML();
+    }
   }
   // This is the new keybinding for the quiz mode
   if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "q") {

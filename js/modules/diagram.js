@@ -98,6 +98,22 @@ export function setPresentMode(enabled) {
         // Restart simulation briefly to adjust layout
         simulation.alpha(0.3).restart();
       }
+
+      // Center the view so that (50%, 50%) positioning is at the center of the viewport
+      // Percentage positions are converted to pixels: (50, 50) -> (0.5 * width, 0.5 * height)
+      // We want that point to be displayed at the center of the viewport
+      const scale = 0.8;
+      const targetX = 0.5 * width;  // The pixel position of a node at (50%, 50%)
+      const targetY = 0.5 * height;
+      const viewportCenterX = width / 2;
+      const viewportCenterY = height / 2;
+
+      // Transform to center: viewport_center = translate + (target * scale)
+      // So: translate = viewport_center - (target * scale)
+      const translateX = viewportCenterX - (targetX * scale);
+      const translateY = viewportCenterY - (targetY * scale);
+
+      svg.call(zoom.transform, d3.zoomIdentity.translate(translateX, translateY).scale(scale));
     }, 0);
   } else {
     if (container) container.classList.remove("present-mode");
