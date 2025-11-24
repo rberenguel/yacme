@@ -98,16 +98,18 @@ window.addEventListener("keydown", (e) => {
     e.preventDefault();
     setPresentMode(false);
   }
-  // Arrow keys for slide navigation in present mode
+  // Slide navigation in present mode
   if (isPresentMode()) {
-    if (e.key === "ArrowLeft") {
+    // Previous slide: ArrowLeft or Comma (,)
+    if (e.key === "ArrowLeft" || e.key === ",") {
       e.preventDefault();
       const currentIndex = getCurrentSlideIndex();
       if (currentIndex !== null && currentIndex > 0) {
         goToSlide(currentIndex - 1);
       }
     }
-    if (e.key === "ArrowRight") {
+    // Next slide: ArrowRight, Space, or Period (.)
+    if (e.key === "ArrowRight" || e.key === " " || e.key === ".") {
       e.preventDefault();
       const currentIndex = getCurrentSlideIndex();
       const total = getTotalSlides();

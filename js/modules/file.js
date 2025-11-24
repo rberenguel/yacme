@@ -345,11 +345,25 @@ function inlineAllStyles(element) {
 
   // List of critical CSS properties to inline for SVG rendering
   const criticalProps = [
-    'fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'stroke-linecap', 'stroke-linejoin',
-    'opacity', 'fill-opacity', 'stroke-opacity',
-    'font-family', 'font-size', 'font-weight', 'font-style',
-    'text-anchor', 'dominant-baseline',
-    'filter', 'transform', 'display', 'visibility'
+    "fill",
+    "stroke",
+    "stroke-width",
+    "stroke-dasharray",
+    "stroke-linecap",
+    "stroke-linejoin",
+    "opacity",
+    "fill-opacity",
+    "stroke-opacity",
+    "font-family",
+    "font-size",
+    "font-weight",
+    "font-style",
+    "text-anchor",
+    "dominant-baseline",
+    "filter",
+    "transform",
+    "display",
+    "visibility",
   ];
 
   let styleString = "";
@@ -389,11 +403,12 @@ async function svgToCanvas(svgElement, width, height) {
       svgClone.setAttribute("height", height);
 
       // Load font files and CSS
-      const [iconoirFontBlob, ostrichsansBase64Module, cssContent] = await Promise.all([
-        fetch("fonts/iconoir/iconoir.woff2").then((res) => res.blob()),
-        import("../../fonts/ostrichsans-base64.js"),
-        fetch("style.css").then((res) => res.text()),
-      ]);
+      const [iconoirFontBlob, ostrichsansBase64Module, cssContent] =
+        await Promise.all([
+          fetch("fonts/iconoir/iconoir.woff2").then((res) => res.blob()),
+          import("../../fonts/ostrichsans-base64.js"),
+          fetch("style.css").then((res) => res.text()),
+        ]);
 
       const iconoirFontBase64 = await new Promise((resolve) => {
         const reader = new FileReader();
@@ -402,9 +417,7 @@ async function svgToCanvas(svgElement, width, height) {
       });
 
       // Remove @import statements from CSS (they don't work in embedded SVG)
-      const cleanedCSS = cssContent
-        .replace(/@import[^;]+;/g, '')
-        .trim();
+      const cleanedCSS = cssContent.replace(/@import[^;]+;/g, "").trim();
 
       // Create embedded styles with fonts and all CSS rules
       const embeddedStyles = `
@@ -449,19 +462,6 @@ async function svgToCanvas(svgElement, width, height) {
           '<svg xmlns="http://www.w3.org/2000/svg"',
         );
       }
-
-      // DEBUG: Save the SVG string to see what we're generating
-      console.log("Generated SVG length:", svgString.length);
-      console.log("SVG preview (first 1000 chars):", svgString.substring(0, 1000));
-
-      // DEBUG: Save the SVG to a file for inspection
-      const debugBlob = new Blob([svgString], { type: "image/svg+xml" });
-      const debugUrl = URL.createObjectURL(debugBlob);
-      const debugA = document.createElement("a");
-      debugA.href = debugUrl;
-      debugA.download = "debug-slide.svg";
-      debugA.click();
-      URL.revokeObjectURL(debugUrl);
 
       // Create a blob from the SVG string
       const blob = new Blob([svgString], {

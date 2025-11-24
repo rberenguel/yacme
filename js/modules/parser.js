@@ -105,7 +105,10 @@ export function parseCompactFormat(text) {
         excludeEdges: [],
         autoExpandNodes: [],
         autoCollapseNodes: [],
-        lineStart: lineNumber,
+        highlightNodes: [],
+        highlightEdges: [],
+        viewTransform: null,
+        lineStart: lineNumber + 1, // Start from the line after # SLIDES
       };
       continue;
     }
@@ -141,13 +144,26 @@ export function parseCompactFormat(text) {
           autoCollapseNodes: [],
           highlightNodes: [],
           highlightEdges: [],
+          viewTransform: null, // Store viewport transform (centerX%, centerY%, scale)
           lineStart: lineNumber + 1,
         };
         continue;
       }
 
       // Parse slide content
-      if (trimmedLine[0] === "-") {
+      if (trimmedLine.startsWith("@view")) {
+        // Viewport transform: @view (centerX%, centerY%, scale)
+        const viewMatch = trimmedLine.match(
+          /@view\s*\((\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\)/,
+        );
+        if (viewMatch) {
+          currentSlide.viewTransform = {
+            centerX: parseFloat(viewMatch[1]),
+            centerY: parseFloat(viewMatch[2]),
+            scale: parseFloat(viewMatch[3]),
+          };
+        }
+      } else if (trimmedLine[0] === "-") {
         // Exclusion
         const content = trimmedLine.substring(1).trim();
         if (content.includes("->")) {
@@ -426,6 +442,7 @@ export function computeCumulativeSlides(slides, allNodes) {
   let autoExpandNodes = new Set();
   let autoCollapseNodes = new Set();
   let nodePositions = {}; // Track positions cumulatively
+  let currentViewTransform = null; // Track viewport transform cumulatively
 
   for (const slide of slides) {
     // Add new nodes
@@ -455,6 +472,11 @@ export function computeCumulativeSlides(slides, allNodes) {
       nodePositions = { ...nodePositions, ...slide.nodePositions };
     }
 
+    // Update viewport transform if specified (later slides override)
+    if (slide.viewTransform) {
+      currentViewTransform = slide.viewTransform;
+    }
+
     // Highlights are NOT cumulative - only apply to current slide
     const highlightNodes = slide.highlightNodes || [];
     const highlightEdges = slide.highlightEdges || [];
@@ -482,6 +504,7 @@ export function computeCumulativeSlides(slides, allNodes) {
       highlightNodes: highlightNodes, // Not cumulative
       highlightEdges: highlightEdges, // Not cumulative
       nodePositions: { ...nodePositions }, // Copy of cumulative positions
+      viewTransform: currentViewTransform ? { ...currentViewTransform } : null, // Copy of current viewport
       lineStart: slide.lineStart,
       lineEnd: slide.lineEnd,
     });

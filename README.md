@@ -11,13 +11,17 @@ Following the trails of [Garbuix](https://github.com/rberenguel/garbuix) and oth
 - 🎯 **Interactive Nodes**: Expandable sections with prose content
 - 🎬 **Presentation Mode**: Create slides that progressively reveal your diagram
 - 📍 **Positioned Slides**: Place nodes exactly where you want them with percentage-based coordinates
+- 📹 **Viewport Positioning**: Each slide can have its own camera position and zoom level with `@view` directives
 - ✨ **Multi-Level Highlighting**: Draw attention with 4 color-coded highlight levels
 - 🎯 **Drag-to-Position**: Reposition nodes in present mode and auto-update the source
+- 🎥 **Interactive Camera**: Zoom/pan in present mode to set custom viewport positions per slide
 - 🔗 **Clickable Links**: Add URLs to nodes and edges
 - 🎨 **Customizable Styling**: Inline CSS and class-based styling
 - 🔍 **Icon Support**: Embed Iconoir icons in labels
 - 💾 **Persistence**: Save/load diagrams to local storage
-- 📤 **Export**: Create standalone HTML presentations with ?preso URL parameter
+- 📤 **Dual Export**:
+  - Standalone HTML presentations with ?preso URL parameter
+  - High-resolution PNG export of all slides (perfect for Google Slides/PowerPoint)
 
 ## Quick Start
 
@@ -281,6 +285,20 @@ A -> B
 !A -> B      # Highlighted edge
 ```
 
+**Set viewport position and zoom:**
+
+```
+@view (50, 50, 0.8)    # Center at (50%, 50%), scale 0.8
+@view (25, 30, 1.5)    # Center at (25%, 30%), zoomed in to 1.5x
+```
+
+The `@view` directive defines the camera position and zoom for a slide:
+
+- First two numbers: percentage coordinates (0-100) of the center point
+- Third number: zoom scale (0.8 = zoomed out, 1.5 = zoomed in)
+
+**Interactive capture**: In present mode, zoom/pan to your desired view and wait 1 second - the `@view` directive will be automatically written to your slide!
+
 **Remove items (from this slide onward):**
 
 ```
@@ -371,16 +389,17 @@ This creates 5 slides:
 
 ## Keyboard Shortcuts
 
-| Shortcut           | Action                            |
-| ------------------ | --------------------------------- |
-| `Cmd/Ctrl+S`       | Save to local storage             |
-| `Cmd/Ctrl+Shift+S` | Save as (new name)                |
-| `Cmd/Ctrl+O`       | Open from local storage           |
-| `Cmd/Ctrl+N`       | New diagram                       |
-| `Cmd+E`            | Export standalone HTML            |
-| `Cmd/Ctrl+Enter`   | Toggle presentation mode          |
-| `Escape`           | Exit presentation mode            |
-| `Arrow Left/Right` | Navigate slides (in present mode) |
+| Shortcut            | Action                                                   |
+| ------------------- | -------------------------------------------------------- |
+| `Cmd/Ctrl+S`        | Save to local storage                                    |
+| `Cmd/Ctrl+Shift+S`  | Save as (new name)                                       |
+| `Cmd/Ctrl+O`        | Open from local storage                                  |
+| `Cmd/Ctrl+N`        | New diagram                                              |
+| `Cmd+E`             | Export (HTML in editor mode, PNG slides in present mode) |
+| `Cmd/Ctrl+Enter`    | Toggle presentation mode                                 |
+| `Escape`            | Exit presentation mode                                   |
+| `→` / `Space` / `.` | Next slide (in present mode)                             |
+| `←` / `,`           | Previous slide (in present mode)                         |
 
 ## Styling Tips
 

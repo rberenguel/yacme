@@ -286,3 +286,67 @@ export function updateNodePositionInEditor(
     },
   });
 }
+
+/**
+ * Updates or adds a @view directive for the specified slide
+ * @param {number} slideIndex - The slide index to update
+ * @param {number} centerX - Center X position as percentage (0-100)
+ * @param {number} centerY - Center Y position as percentage (0-100)
+ * @param {number} scale - Zoom scale (e.g., 0.8, 1.5)
+ */
+export function updateViewTransformInEditor(
+  slideIndex,
+  centerX,
+  centerY,
+  scale,
+) {
+  const editor = getEditorView();
+  const doc = editor.state.doc;
+  const parsedData = currentParsedData;
+
+  if (!parsedData || !parsedData.slides) return;
+
+  const rawSlides = parsedData.slides;
+  if (!rawSlides || slideIndex >= rawSlides.length) return;
+
+  const targetSlide = rawSlides[slideIndex];
+  const startLine = targetSlide.lineStart;
+  const endLine = targetSlide.lineEnd;
+
+  // Search for existing @view directive in this slide
+  let foundViewLine = null;
+  for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
+    const line = doc.line(lineNum);
+    const trimmed = line.text.trim();
+    if (trimmed.startsWith("@view")) {
+      foundViewLine = lineNum;
+      break;
+    }
+  }
+
+  const viewText = `@view (${centerX.toFixed(1)}, ${centerY.toFixed(1)}, ${scale.toFixed(2)})`;
+
+  if (foundViewLine !== null) {
+    // Update existing @view directive
+    const line = doc.line(foundViewLine);
+    const leadingWhitespace = line.text.match(/^\s*/)[0];
+    editor.dispatch({
+      changes: {
+        from: line.from,
+        to: line.to,
+        insert: `${leadingWhitespace}${viewText}`,
+      },
+    });
+  } else {
+    // Add new @view directive at the start of the slide
+    const insertLine = doc.line(startLine);
+    const leadingWhitespace = insertLine.text.match(/^\s*/)[0];
+    editor.dispatch({
+      changes: {
+        from: insertLine.from,
+        to: insertLine.from,
+        insert: `${leadingWhitespace}${viewText}\n`,
+      },
+    });
+  }
+}

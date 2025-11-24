@@ -4,6 +4,7 @@ import {
   highlightNodeInEditor,
   clearHighlightInEditor,
   updateNodePositionInEditor,
+  updateViewTransformInEditor,
 } from "./editor.js";
 const svg = d3.select("#diagram-container");
 const svgElement = document.querySelector(".diagram-pane");
@@ -97,23 +98,30 @@ export function setPresentMode(enabled) {
         updateDiagramFromSlide();
         // Restart simulation briefly to adjust layout
         simulation.alpha(0.3).restart();
+
+        // Only apply default centering if the first slide doesn't have a @view directive
+        const firstSlide = getCurrentSlide();
+        if (!firstSlide || !firstSlide.viewTransform) {
+          // Center the view so that (50%, 50%) positioning is at the center of the viewport
+          // Percentage positions are converted to pixels: (50, 50) -> (0.5 * width, 0.5 * height)
+          // We want that point to be displayed at the center of the viewport
+          const scale = 0.8;
+          const targetX = 0.5 * width; // The pixel position of a node at (50%, 50%)
+          const targetY = 0.5 * height;
+          const viewportCenterX = width / 2;
+          const viewportCenterY = height / 2;
+
+          // Transform to center: viewport_center = translate + (target * scale)
+          // So: translate = viewport_center - (target * scale)
+          const translateX = viewportCenterX - targetX * scale;
+          const translateY = viewportCenterY - targetY * scale;
+
+          svg.call(
+            zoom.transform,
+            d3.zoomIdentity.translate(translateX, translateY).scale(scale),
+          );
+        }
       }
-
-      // Center the view so that (50%, 50%) positioning is at the center of the viewport
-      // Percentage positions are converted to pixels: (50, 50) -> (0.5 * width, 0.5 * height)
-      // We want that point to be displayed at the center of the viewport
-      const scale = 0.8;
-      const targetX = 0.5 * width;  // The pixel position of a node at (50%, 50%)
-      const targetY = 0.5 * height;
-      const viewportCenterX = width / 2;
-      const viewportCenterY = height / 2;
-
-      // Transform to center: viewport_center = translate + (target * scale)
-      // So: translate = viewport_center - (target * scale)
-      const translateX = viewportCenterX - (targetX * scale);
-      const translateY = viewportCenterY - (targetY * scale);
-
-      svg.call(zoom.transform, d3.zoomIdentity.translate(translateX, translateY).scale(scale));
     }, 0);
   } else {
     if (container) container.classList.remove("present-mode");
@@ -161,6 +169,42 @@ function updateDiagramFromSlide() {
     updateDiagram(cachedFullNodeData);
   }
   updateSlideIndicator();
+
+  // Apply viewport transform if specified for this slide
+  const slideData = getCurrentSlide();
+  if (slideData && slideData.viewTransform) {
+    applyViewTransform(slideData.viewTransform);
+  }
+}
+
+/**
+ * Apply a viewport transform (center position and scale)
+ * @param {Object} transform - {centerX, centerY, scale} where centerX/Y are percentages (0-100)
+ */
+function applyViewTransform(transform) {
+  const { centerX, centerY, scale } = transform;
+
+  // Convert percentage to pixel coordinates
+  const targetX = (centerX / 100) * width;
+  const targetY = (centerY / 100) * height;
+
+  // Calculate viewport center
+  const viewportCenterX = width / 2;
+  const viewportCenterY = height / 2;
+
+  // Calculate translate to position target at viewport center
+  // viewport_center = translate + (target * scale)
+  const translateX = viewportCenterX - targetX * scale;
+  const translateY = viewportCenterY - targetY * scale;
+
+  // Apply transform with animation
+  svg
+    .transition()
+    .duration(300)
+    .call(
+      zoom.transform,
+      d3.zoomIdentity.translate(translateX, translateY).scale(scale),
+    );
 }
 
 /**
@@ -498,10 +542,25 @@ function drag(simulation) {
     .on("end", dragended);
 }
 
+// Debounce timer for capturing viewport changes
+let viewportUpdateTimer = null;
+
 const zoom = d3
   .zoom()
   .scaleExtent([0.001, 3])
-  .on("zoom", ({ transform }) => zoomGroup.attr("transform", transform))
+  .on("zoom", ({ transform }) => {
+    zoomGroup.attr("transform", transform);
+
+    // Capture viewport changes in present mode (debounced)
+    if (presentMode && currentSlideIndex !== null) {
+      if (viewportUpdateTimer) {
+        clearTimeout(viewportUpdateTimer);
+      }
+      viewportUpdateTimer = setTimeout(() => {
+        captureCurrentViewport();
+      }, 1000); // Wait 1 second after user stops zooming/panning
+    }
+  })
   .filter((event) => {
     // Don't zoom/pan on prose content or non-left clicks
     if (event.target.closest(".prose-content")) return false;
@@ -509,6 +568,34 @@ const zoom = d3
     return true;
   });
 svg.call(zoom).call(zoom.scaleTo, 0.8);
+
+/**
+ * Captures the current viewport transform and updates the editor
+ */
+function captureCurrentViewport() {
+  if (!presentMode || currentSlideIndex === null) return;
+
+  // Get current transform
+  const transform = d3.zoomTransform(svg.node());
+  const scale = transform.k;
+  const translateX = transform.x;
+  const translateY = transform.y;
+
+  // Calculate the center point in the coordinate space
+  // viewport_center = translate + (target * scale)
+  // target = (viewport_center - translate) / scale
+  const viewportCenterX = width / 2;
+  const viewportCenterY = height / 2;
+  const targetX = (viewportCenterX - translateX) / scale;
+  const targetY = (viewportCenterY - translateY) / scale;
+
+  // Convert to percentages
+  const centerX = (targetX / width) * 100;
+  const centerY = (targetY / height) * 100;
+
+  // Update the editor
+  updateViewTransformInEditor(currentSlideIndex, centerX, centerY, scale);
+}
 
 export function updateDiagram(newData) {
   const oldNodeMap = new Map(nodes.map((d) => [d.id, d]));
