@@ -151,7 +151,7 @@ export function createStandaloneHTML(
         ${processedQuizJs}
 
         // The original diagram text content
-        const diagramText = \`${diagramText.replace(/`/g, "\\`").replace(/\$/g, "\\$")}\`;
+        const diagramText = \`${diagramText.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$/g, "\\$")}\`;
 
         // Parse the diagram text to get slides if they exist
         const parsedData = parseCompactFormat(diagramText);
@@ -163,20 +163,9 @@ export function createStandaloneHTML(
             initSlideControls();
         }
 
-        // The diagram data from the main application
-        const diagramData = ${dataString};
-
-        // The links in the exported data need to be re-hydrated to reference the actual node objects.
-        const nodeMapData = new Map(diagramData.nodes.map(n => [n.id, n]));
-        diagramData.links.forEach(link => {
-            link.source = nodeMapData.get(link.source.id || link.source);
-            link.target = nodeMapData.get(link.target.id || link.target);
-        });
-
-        // Icon map is already baked into the processed diagram.js code
-
-        // Kick off the diagram rendering and simulation
-        updateDiagram(diagramData.nodes);
+        // Use the parsed nodes from the diagram text, not the pre-processed data
+        // This ensures all properties (like labelStyle, newlines in titles, etc.) are preserved
+        updateDiagram(parsedData.nodes);
 
         // Check URL parameters for auto-starting presentation mode
         const urlParams = new URLSearchParams(window.location.search);
