@@ -451,4 +451,3 @@ The codebase is organized into modules:
 - `file.js` - Save/load functionality
 - `quiz.js` - Quiz/presentation mode
 
-For detailed implementation notes, see [CLAUDE.md](CLAUDE.md).
