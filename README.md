@@ -450,4 +450,3 @@ The codebase is organized into modules:
 - `editor.js` - CodeMirror integration and live updates
 - `file.js` - Save/load functionality
 - `quiz.js` - Quiz/presentation mode
-

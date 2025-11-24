@@ -1,6 +1,9 @@
 function processModuleContent(moduleContent, iconMapData = null) {
-  // 1. Remove import statements more robustly
-  let processed = moduleContent.replace(/^import .* from ['"].*['"];$/gm, "");
+  // 1. Remove import statements more robustly (including multiline imports)
+  let processed = moduleContent.replace(
+    /import\s+[\s\S]*?\s+from\s+['"][^'"]+['"];/g,
+    "",
+  );
   // 2. Remove export statements, but keep the function/variable declaration
   processed = processed.replace(/export (function|const|let|var) /g, "$1 ");
   // 3. Replace editor functions with no-ops for standalone export
@@ -9,6 +12,14 @@ function processModuleContent(moduleContent, iconMapData = null) {
     "(() => {})($1)",
   );
   processed = processed.replace(/clearHighlightInEditor\(\)/g, "() => {}");
+  processed = processed.replace(
+    /updateNodePositionInEditor\(([^)]*)\)/g,
+    "(() => {})($1)",
+  );
+  processed = processed.replace(
+    /updateAllViewTransformsInEditor\(([^)]*)\)/g,
+    "(() => {})($1)",
+  );
   // 4. If iconMapData is provided, replace the empty iconMap initialization
   if (iconMapData) {
     processed = processed.replace(

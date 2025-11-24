@@ -410,12 +410,14 @@ export function updateAllViewTransformsInEditor(viewportsMap) {
   const slideLines = []; // Array of arrays, each sub-array is one slide's lines
   let currentSlide = [];
 
-  for (let i = 1; i < lines.length; i++) { // Skip first line (# SLIDES)
+  for (let i = 1; i < lines.length; i++) {
+    // Skip first line (# SLIDES)
     const line = lines[i];
     if (line.trim() === "---") {
       slideLines.push(currentSlide);
       currentSlide = [];
-    } else {
+    } else if (line.trim() !== "") {
+      // Only add non-empty lines to preserve content
       currentSlide.push(line);
     }
   }
@@ -439,14 +441,18 @@ export function updateAllViewTransformsInEditor(viewportsMap) {
     console.log(`Updating slide ${slideIndex} with ${viewText}`);
 
     // Remove all existing @view lines
-    const filteredLines = slide.filter(line => !line.trim().startsWith("@view"));
+    const filteredLines = slide.filter(
+      (line) => !line.trim().startsWith("@view"),
+    );
 
     // Add new @view at the beginning with a blank line separator
     slideLines[slideIndex] = [viewText, "", ...filteredLines];
   });
 
   // Rebuild the slides section with newlines around separators
-  const rebuiltSlides = slideLines.map(slide => slide.join("\n")).join("\n\n---\n\n");
+  const rebuiltSlides = slideLines
+    .map((slide) => slide.join("\n"))
+    .join("\n\n---\n\n");
   const newSlidesSection = "# SLIDES\n\n" + rebuiltSlides;
   const newDocText = beforeSlides + newSlidesSection;
 
