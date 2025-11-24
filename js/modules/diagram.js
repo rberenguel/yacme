@@ -179,10 +179,23 @@ function updateDiagramFromSlide() {
   }
   updateSlideIndicator();
 
-  // Apply viewport transform if specified for this slide
+  // Apply viewport transform - use current slide's view, or inherit from previous slide
   const slideData = getCurrentSlide();
-  if (slideData && slideData.viewTransform) {
-    applyViewTransform(slideData.viewTransform);
+  let viewTransform = slideData?.viewTransform;
+
+  // If current slide has no view, search backwards for the most recent view
+  if (!viewTransform && currentSlideIndex > 0) {
+    for (let i = currentSlideIndex - 1; i >= 0; i--) {
+      const prevSlide = cumulativeSlides[i];
+      if (prevSlide?.viewTransform) {
+        viewTransform = prevSlide.viewTransform;
+        break;
+      }
+    }
+  }
+
+  if (viewTransform) {
+    applyViewTransform(viewTransform);
   }
 }
 

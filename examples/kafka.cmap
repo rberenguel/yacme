@@ -1,7 +1,13 @@
 - nodeStyle="fill: #1a1a2e; stroke: #2aa198;"
-- labelStyle="fill: #93a1a1;"
+- labelStyle="fill: #93a1a1; font-family: OstrichSans; font-size: 30px;"
 - edgeStyle="stroke: #586e75; stroke-width: 1;"
 - edgeLabelStyle="fill: #657b83; font-size: 11px;"
+- charWidth="13"
+- lineHeight="28"
+- baseHeight="80"
+
+Welcome Diagram about\nKafka stuff ; labelStyle="fill: #c6c; font-size: 40px;" charWidth="15"
+
 
 # Topics
 
@@ -16,6 +22,7 @@ Topics are divided into partitions for scalability and parallelism. Each partiti
 ---
 
 # Records
+
 
 Individual messages in Kafka. Each record consists of a key, a value, a timestamp, and optional headers.
 
@@ -80,69 +87,132 @@ sp -> Ordered is completely ; arrowColor="#2aa198"
 
 # SLIDES
 
-Topics (54, 43)
+@view (50.0, 50.0, 2.85)
+
+Welcome (50, 50)
+
 ---
-Internal (39, 34)
-User (72, 34)
+
+@view (50.0, 50.0, 2.85)
+
+-Welcome
+Topics (50, 50)
+
+---
+
+@view (46.8, 43.5, 1.31)
+
+Internal (40, 25)
+User (56, 31)
 Topics -> Internal
 Topics -> User
+
 ---
-Partitions (54, 56)
+
+@view (46.2, 45.3, 1.31)
+
+Partitions (50, 67)
 Topics -> Partitions
+
 ---
-Records (54, 72)
+
+@view (47.7, 49.3, 1.31)
+
+Records (52, 77)
 Partitions -> Records
+
 ---
+
+@view (49.0, 54.9, 1.31)
+
 Ordered (64, 78)
 Records -> Ordered
 kv (41, 78)
 Records -> kv
+
 ---
-Time (65, 63)
+
+@view (50.1, 53.1, 1.31)
+
+Time (76, 76)
 Records -> Time
 Ordered -> Time
+
 ---
+
+@view (48.2, 52.9, 1.31)
+
 sk (33, 63)
 kv -> sk
 Records -> sk
+
 ---
-sp (31, 97)
+
+@view (44.6, 56.4, 1.31)
+
+sp (27, 40)
 sk -> sp
 sp -> Ordered
+
 ---
-Tombstone (35, 88)
+
+@view (44.6, 56.4, 1.31)
+
+Tombstone (25, 78)
 kv -> Tombstone
+
 ---
-Compaction (18, 52)
+
+@view (44.6, 56.4, 1.31)
+
+Compaction (16, 48)
 Time -> Compaction
 Compaction -> sk
+
 ---
+
+@view (44.6, 56.4, 1.31)
+
 Expiration (65, 50)
 Time -> Expiration
-ret (80, 45)
+ret (72, 40)
 Expiration -> ret
+
 ---
+
+@view (44.6, 56.4, 1.31)
+
 -Topics
 -Internal
 -User
 -Topics -> Internal
 -Topics -> User
 -Topics -> Partitions
-Consumers (39, 41)
+Consumers (37, 32)
 Partitions -> Consumers
 Consumers -> Topics
+
 ---
-cg (59, 28)
-User (75, 35)
+
+@view (42.5, 51.1, 0.94)
+
+cg (36, 18)
+User (14, 18)
 Topics (50, 15)
 User -> cg
 cg -> Consumers
+
 ---
-Offset (101, 73)
+
+@view (41.0, 51.9, 0.89)
+
+Offset (58, 32)
 Consumers -> Offset
 Consumers -> Offset
 Offset -> Ordered
+
 ---
-Internal (91, 12)
+
+Internal (67, 16)
 Topics -> Internal
 Offset -> Internal
