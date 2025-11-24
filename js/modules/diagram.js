@@ -4,7 +4,7 @@ import {
   highlightNodeInEditor,
   clearHighlightInEditor,
   updateNodePositionInEditor,
-  updateViewTransformInEditor,
+  updateAllViewTransformsInEditor,
 } from "./editor.js";
 const svg = d3.select("#diagram-container");
 const svgElement = document.querySelector(".diagram-pane");
@@ -67,6 +67,12 @@ export function getTotalSlides() {
  */
 export function goToSlide(index) {
   if (!allSlides || index < 0 || index >= allSlides.length) return;
+
+  // Capture current viewport before switching slides
+  if (presentMode && currentSlideIndex !== null) {
+    captureCurrentViewport();
+  }
+
   currentSlideIndex = index;
   updateDiagramFromSlide();
 }
@@ -124,6 +130,9 @@ export function setPresentMode(enabled) {
       }
     }, 0);
   } else {
+    // Write all captured viewports to editor when exiting present mode
+    writeAllViewports();
+
     if (container) container.classList.remove("present-mode");
     editorPane.style.display = "flex";
     resizer.style.display = "block";
@@ -542,24 +551,11 @@ function drag(simulation) {
     .on("end", dragended);
 }
 
-// Debounce timer for capturing viewport changes
-let viewportUpdateTimer = null;
-
 const zoom = d3
   .zoom()
   .scaleExtent([0.001, 3])
   .on("zoom", ({ transform }) => {
     zoomGroup.attr("transform", transform);
-
-    // Capture viewport changes in present mode (debounced)
-    if (presentMode && currentSlideIndex !== null) {
-      if (viewportUpdateTimer) {
-        clearTimeout(viewportUpdateTimer);
-      }
-      viewportUpdateTimer = setTimeout(() => {
-        captureCurrentViewport();
-      }, 1000); // Wait 1 second after user stops zooming/panning
-    }
   })
   .filter((event) => {
     // Don't zoom/pan on prose content or non-left clicks
@@ -569,8 +565,11 @@ const zoom = d3
   });
 svg.call(zoom).call(zoom.scaleTo, 0.8);
 
+// Store viewport transforms per slide during present mode
+let slideViewports = new Map();
+
 /**
- * Captures the current viewport transform and updates the editor
+ * Captures the current viewport transform for the current slide
  */
 function captureCurrentViewport() {
   if (!presentMode || currentSlideIndex === null) return;
@@ -593,8 +592,18 @@ function captureCurrentViewport() {
   const centerX = (targetX / width) * 100;
   const centerY = (targetY / height) * 100;
 
-  // Update the editor
-  updateViewTransformInEditor(currentSlideIndex, centerX, centerY, scale);
+  // Store in memory (don't write to editor yet)
+  slideViewports.set(currentSlideIndex, { centerX, centerY, scale });
+}
+
+/**
+ * Writes all captured viewport transforms to the editor
+ */
+function writeAllViewports() {
+  if (slideViewports.size > 0) {
+    updateAllViewTransformsInEditor(slideViewports);
+    slideViewports.clear();
+  }
 }
 
 export function updateDiagram(newData) {

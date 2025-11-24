@@ -233,8 +233,9 @@ export function updateNodePositionInEditor(
   if (!rawSlides || slideIndex >= rawSlides.length) return;
 
   const targetSlide = rawSlides[slideIndex];
-  const startLine = targetSlide.lineStart;
-  const endLine = targetSlide.lineEnd;
+  // Parser uses 0-based line numbers, CodeMirror uses 1-based
+  const startLine = targetSlide.lineStart + 1;
+  const endLine = targetSlide.lineEnd + 1;
 
   // Search for the node reference in this slide
   let foundLine = null;
@@ -243,6 +244,7 @@ export function updateNodePositionInEditor(
   let prefix = "";
 
   for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
+    if (lineNum > doc.lines) break; // Safety check
     const line = doc.line(lineNum);
     const trimmed = line.text.trim();
 
@@ -287,6 +289,9 @@ export function updateNodePositionInEditor(
   });
 }
 
+// Track last update to prevent duplicates during re-parsing
+let lastViewUpdate = { slideIndex: -1, text: "", timestamp: 0 };
+
 /**
  * Updates or adds a @view directive for the specified slide
  * @param {number} slideIndex - The slide index to update
@@ -309,13 +314,27 @@ export function updateViewTransformInEditor(
   const rawSlides = parsedData.slides;
   if (!rawSlides || slideIndex >= rawSlides.length) return;
 
+  const viewText = `@view (${centerX.toFixed(1)}, ${centerY.toFixed(1)}, ${scale.toFixed(2)})`;
+
+  // Prevent duplicate updates within 500ms
+  const now = Date.now();
+  if (
+    lastViewUpdate.slideIndex === slideIndex &&
+    lastViewUpdate.text === viewText &&
+    now - lastViewUpdate.timestamp < 500
+  ) {
+    return;
+  }
+
   const targetSlide = rawSlides[slideIndex];
-  const startLine = targetSlide.lineStart;
-  const endLine = targetSlide.lineEnd;
+  // Parser uses 0-based line numbers, CodeMirror uses 1-based
+  const startLine = targetSlide.lineStart + 1;
+  const endLine = targetSlide.lineEnd + 1;
 
   // Search for existing @view directive in this slide
   let foundViewLine = null;
   for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
+    if (lineNum > doc.lines) break; // Safety check
     const line = doc.line(lineNum);
     const trimmed = line.text.trim();
     if (trimmed.startsWith("@view")) {
@@ -324,7 +343,15 @@ export function updateViewTransformInEditor(
     }
   }
 
-  const viewText = `@view (${centerX.toFixed(1)}, ${centerY.toFixed(1)}, ${scale.toFixed(2)})`;
+  // Check if the existing @view is already what we want
+  if (foundViewLine !== null) {
+    const line = doc.line(foundViewLine);
+    if (line.text.trim() === viewText) {
+      // Already up to date, no need to change
+      lastViewUpdate = { slideIndex, text: viewText, timestamp: now };
+      return;
+    }
+  }
 
   if (foundViewLine !== null) {
     // Update existing @view directive
@@ -349,4 +376,90 @@ export function updateViewTransformInEditor(
       },
     });
   }
+
+  lastViewUpdate = { slideIndex, text: viewText, timestamp: now };
+}
+
+/**
+ * Writes all viewport transforms in a single transaction by rebuilding the entire SLIDES section
+ * @param {Map<number, {centerX: number, centerY: number, scale: number}>} viewportsMap - Map of slide index to viewport data
+ */
+export function updateAllViewTransformsInEditor(viewportsMap) {
+  console.log("=== updateAllViewTransformsInEditor called ===");
+  console.log("viewportsMap size:", viewportsMap.size);
+
+  const editor = getEditorView();
+  const doc = editor.state.doc;
+  const docText = doc.toString();
+
+  // Find the # SLIDES marker
+  const slidesMarkerIndex = docText.indexOf("# SLIDES");
+  if (slidesMarkerIndex === -1) {
+    console.log("No # SLIDES marker found");
+    return;
+  }
+
+  // Split into before and after SLIDES
+  const beforeSlides = docText.substring(0, slidesMarkerIndex);
+  const slidesSection = docText.substring(slidesMarkerIndex);
+
+  console.log("Found # SLIDES at index:", slidesMarkerIndex);
+
+  // Split slides section into individual slides
+  const lines = slidesSection.split("\n");
+  const slideLines = []; // Array of arrays, each sub-array is one slide's lines
+  let currentSlide = [];
+
+  for (let i = 1; i < lines.length; i++) { // Skip first line (# SLIDES)
+    const line = lines[i];
+    if (line.trim() === "---") {
+      slideLines.push(currentSlide);
+      currentSlide = [];
+    } else {
+      currentSlide.push(line);
+    }
+  }
+  // Push the last slide if any
+  if (currentSlide.length > 0) {
+    slideLines.push(currentSlide);
+  }
+
+  console.log("Parsed slides:", slideLines.length);
+
+  // Update @view directives for each slide
+  viewportsMap.forEach((viewport, slideIndex) => {
+    if (slideIndex >= slideLines.length) {
+      console.log(`Slide ${slideIndex} out of range, skipping`);
+      return;
+    }
+
+    const slide = slideLines[slideIndex];
+    const viewText = `@view (${viewport.centerX.toFixed(1)}, ${viewport.centerY.toFixed(1)}, ${viewport.scale.toFixed(2)})`;
+
+    console.log(`Updating slide ${slideIndex} with ${viewText}`);
+
+    // Remove all existing @view lines
+    const filteredLines = slide.filter(line => !line.trim().startsWith("@view"));
+
+    // Add new @view at the beginning with a blank line separator
+    slideLines[slideIndex] = [viewText, "", ...filteredLines];
+  });
+
+  // Rebuild the slides section with newlines around separators
+  const rebuiltSlides = slideLines.map(slide => slide.join("\n")).join("\n\n---\n\n");
+  const newSlidesSection = "# SLIDES\n\n" + rebuiltSlides;
+  const newDocText = beforeSlides + newSlidesSection;
+
+  console.log("Rebuilding document with updated slides");
+
+  // Apply the single change
+  editor.dispatch({
+    changes: {
+      from: 0,
+      to: doc.length,
+      insert: newDocText,
+    },
+  });
+
+  console.log("Dispatch complete");
 }

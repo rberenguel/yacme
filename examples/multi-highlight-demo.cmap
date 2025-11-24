@@ -9,8 +9,15 @@ Priority -> Medium
 Priority -> High
 Priority -> Critical
 
+# Priority
+
+Expands
+
+---
+
 # SLIDES
-@view (51.0, 40.2, 1.33)
+
+@view (50.8, 39.8, 1.37)
 
 
 Priority (50, 10)
@@ -18,26 +25,36 @@ Low (20, 40)
 Medium (40, 60)
 High (60, 60)
 Critical (80, 40)
+
 ---
+
 @view (51.0, 40.2, 1.33)
 
 Priority -> Low
 Priority -> Medium
 Priority -> High
 Priority -> Critical
+
 ---
+
 @view (39.2, 41.2, 1.33)
 !Low (20, 40)
 !Priority -> Low
+
 ---
+
 @view (44.7, 53.4, 1.33)
 !!Medium (40, 60)
 !!Priority -> Medium
+
 ---
+
 @view (53.1, 59.9, 1.33)
 !!!High (60, 60)
 !!!Priority -> High
+
 ---
+
 @view (72.5, 50.8, 1.33)
 !!!!Critical (80, 40)
 !!!!Priority -> Critical
