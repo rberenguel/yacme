@@ -11,33 +11,61 @@ Welcome Diagram about\nKafka stuff ; labelStyle="fill: #c6c; font-size: 40px;" c
 
 # Topics
 
-The main abstraction in Kafka. Topics are feeds of messages that producers write to and consumers read from.
+The main abstraction in Kafka. **Topics** are feeds of messages that producers write to and consumers read from.
+
+Key characteristics:
+- Named streams of data
+- Can have multiple producers and consumers
+- Persistent and durable
 
 ---
 
 # Partitions
 
-Topics are divided into partitions for scalability and parallelism. Each partition is an ordered, immutable sequence of records.
+Topics are divided into **partitions** for scalability and parallelism.
+
+Each partition is an ordered, immutable sequence of records with:
+- Sequential offset numbering
+- Total ordering within partition
+- Distributed across brokers
 
 ---
 
 # Records
 
+Individual messages in Kafka. Each record consists of:
+- **Key**: Optional, determines partition
+- **Value**: The actual message payload
+- **Timestamp**: When the record was produced
+- **Headers**: Optional metadata
 
-Individual messages in Kafka. Each record consists of a key, a value, a timestamp, and optional headers.
+Records are immutable once written.
 
 ---
 
 # Consumers
 
+Applications that read data from Kafka topics.
 
-Applications that read data from Kafka topics. Consumers can be organized into consumer groups for parallel processing.
+Consumers can be organized into **consumer groups** for:
+- Parallel processing
+- Load balancing
+- Fault tolerance
+
+Each partition is consumed by exactly one consumer in a group.
 
 ---
 
 # Offset
 
-A unique sequential ID assigned to each record within a partition. Consumers use offsets to track their position in the log.
+A unique sequential ID assigned to each record within a partition.
+
+Consumers use offsets to:
+- Track their position in the log
+- Resume from last processed message
+- Rewind to reprocess data
+
+Stored in special `__consumer_offsets` topic.
 
 ---
 

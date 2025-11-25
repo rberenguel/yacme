@@ -465,6 +465,24 @@ function updateDiagramAppearance() {
     .append("xhtml:div")
     .attr("class", "prose-content")
     .html((d) => d.prose);
+
+  // Force link position recalculation after node size changes
+  // This is especially important in present mode where simulation might not be running
+  linksGroup.selectAll("path.link").attr("d", (d) => {
+    const sourcePoint = getBorderPoint(d.target, d.source);
+    const targetPoint = getBorderPoint(d.source, d.target);
+    return `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+  });
+
+  linksGroup
+    .selectAll("g.link-label-group")
+    .attr(
+      "transform",
+      (d) =>
+        `translate(${(d.source.x + d.target.x) / 2}, ${
+          (d.source.y + d.target.y) / 2
+        })`,
+    );
 }
 
 function getBorderPoint(sourceNode, targetNode) {
@@ -754,11 +772,24 @@ export function updateDiagram(newData) {
               event.stopPropagation();
               highlightNodeInEditor(d.id);
               if (event.defaultPrevented || !d.prose) return;
+
+              // Store current fixed position before toggling
+              const hadFixedPosition = d.fx != null && d.fy != null;
+              const savedFx = d.fx;
+              const savedFy = d.fy;
+
               d.expanded = !d.expanded;
-              if (d.expanded) {
+
+              // Only unfix position if it wasn't already fixed (e.g., not in present mode with positioned nodes)
+              if (d.expanded && !hadFixedPosition) {
                 d.fx = null;
                 d.fy = null;
+              } else if (d.expanded && hadFixedPosition) {
+                // Keep the fixed position in present mode
+                d.fx = savedFx;
+                d.fy = savedFy;
               }
+
               updateDiagramAppearance();
             }
           });

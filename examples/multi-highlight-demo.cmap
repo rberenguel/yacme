@@ -11,7 +11,16 @@ Priority -> Critical
 
 # Priority
 
-Expands
+This node demonstrates **expandable prose sections**.
+
+You can use:
+- **Bold text** with `**bold**`
+- *Italic text* with `*italic*`
+- Lists like this one
+- [Links](https://example.com)
+- And `inline code`
+
+Click the node to expand/collapse!
 
 ---
 

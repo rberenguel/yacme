@@ -43,6 +43,7 @@ export function createStandaloneHTML(
   diagramData,
   d3Content,
   dagreContent,
+  markedContent,
   diagramJsContent,
   cssContent,
   quizJsContent,
@@ -137,7 +138,8 @@ export function createStandaloneHTML(
 
     <script>${d3Content}</script>
     <script>${dagreContent}</script>
-    
+    <script>${markedContent}</script>
+
     <script>
     // Self-executing function to encapsulate the diagram logic
     (function() {

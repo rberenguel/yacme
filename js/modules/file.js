@@ -215,6 +215,7 @@ export async function exportStandaloneHTML() {
     const [
       d3Content,
       dagreContent,
+      markedContent,
       cssContent,
       diagramJsContent,
       quizJsContent,
@@ -226,6 +227,7 @@ export async function exportStandaloneHTML() {
     ] = await Promise.all([
       fetch("libs/d3v7.js").then((res) => res.text()),
       fetch("libs/dagre.js").then((res) => res.text()),
+      fetch("libs/marked.min.js").then((res) => res.text()),
       fetch("style.css").then((res) => res.text()),
       fetch("js/modules/diagram.js").then((res) => res.text()),
       fetch("js/modules/quiz.js").then((res) => res.text()),
@@ -272,6 +274,7 @@ export async function exportStandaloneHTML() {
       exportData,
       d3Content,
       dagreContent,
+      markedContent,
       diagramJsContent,
       cssContent,
       quizJsContent,

@@ -12,6 +12,7 @@ function parseDirectives(directiveString) {
 export function parseCompactFormat(text) {
   const nodesMap = new Map();
   let parsingProseForNode = null;
+  let proseMarkdown = ""; // Accumulate prose as markdown
   let parsingSlides = false;
   const slides = [];
   let currentSlide = null;
@@ -274,17 +275,28 @@ export function parseCompactFormat(text) {
     )
       continue;
     if (trimmedLine.startsWith("---") && parsingProseForNode) {
+      // End of prose section - convert accumulated markdown to HTML
+      const node = ensureNode(parsingProseForNode);
+      if (typeof marked !== 'undefined') {
+        node.prose = marked.parse(proseMarkdown.trim());
+      } else {
+        // Fallback if marked is not available
+        node.prose = proseMarkdown.split('\n').map(line => `<p>${line}</p>`).join('');
+      }
       parsingProseForNode = null;
+      proseMarkdown = "";
       continue;
     }
     if (trimmedLine.startsWith("#")) {
       const nodeId = trimmedLine.split("#").pop().trim().split(/\s+/)[0];
       parsingProseForNode = nodeId;
+      proseMarkdown = ""; // Reset prose markdown accumulator
       ensureNode(nodeId).prose = "";
       continue;
     }
     if (parsingProseForNode) {
-      ensureNode(parsingProseForNode).prose += `<p>${trimmedLine}</p>`;
+      // Accumulate markdown lines
+      proseMarkdown += line + "\n";
       continue;
     }
 
