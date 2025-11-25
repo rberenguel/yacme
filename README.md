@@ -8,16 +8,19 @@ Following the trails of [Garbuix](https://github.com/rberenguel/garbuix) and oth
 
 - 🎨 **Live Preview**: See your diagram update as you type
 - 📝 **Simple Syntax**: Text-based format that's easy to learn and version control
-- 🎯 **Interactive Nodes**: Expandable sections with prose content
+- 🎯 **Interactive Nodes**: Expandable sections with Markdown prose content
+- 💅 **Prose Styling**: Custom CSS styling for expandable nodes with `.style { }` blocks
 - 🎬 **Presentation Mode**: Create slides that progressively reveal your diagram
+- 📍 **PRESET Mode**: Define custom node positions for the main diagram view
 - 📍 **Positioned Slides**: Place nodes exactly where you want them with percentage-based coordinates
 - 📹 **Viewport Positioning**: Each slide can have its own camera position and zoom level with `@view` directives
 - ✨ **Multi-Level Highlighting**: Draw attention with 4 color-coded highlight levels
-- 🎯 **Drag-to-Position**: Reposition nodes in present mode and auto-update the source
-- 🎥 **Interactive Camera**: Zoom/pan in present mode to set custom viewport positions per slide
+- 🎯 **Drag-to-Position**: Reposition nodes in present/preset mode and auto-update the source
+- 🎥 **Interactive Camera**: Zoom/pan in present/preset mode to set custom viewport positions
 - 🔗 **Clickable Links**: Add URLs to nodes and edges
 - 🎨 **Customizable Styling**: Inline CSS and class-based styling
 - 🔍 **Icon Support**: Embed Iconoir icons in labels
+- 👻 **Slide-Only Elements**: Hide nodes/edges in main view, show only in slides
 - 💾 **Persistence**: Save/load diagrams to local storage
 - 📤 **Dual Export**:
   - Standalone HTML presentations with ?preso URL parameter
@@ -387,6 +390,132 @@ This creates 5 slides:
 - **Navigate**: Arrow keys or click buttons
 - **Preview**: Cursor position in editor determines which slide previews
 
+## PRESET Feature
+
+The `# PRESET` section allows you to define custom node positions for the main diagram view, separate from slide positions.
+
+### Basic PRESET
+
+Add `# PRESET` marker between your graph definition and `# SLIDES`:
+
+```
+A First Node
+B Second Node
+C Third Node
+
+A -> B connects
+B -> C leads to
+
+# PRESET
+
+A (25, 50)
+B (50, 25)
+C (75, 50)
+
+# SLIDES
+
+A
+---
+...
+```
+
+### PRESET Syntax
+
+**Position nodes (percentage-based coordinates):**
+
+```
+NodeId (x, y)
+```
+
+- Coordinates are percentages (0-100) relative to viewport
+- Can be negative or >100 if you want nodes off-screen initially
+- Positions are applied when viewing the main diagram (not in slides)
+
+**Set default viewport:**
+
+```
+@view (50, 50, 1.0)
+```
+
+Similar to slides, the `@view` directive sets the initial camera position and zoom for the main view.
+
+### PRESET Mode
+
+**Enter PRESET mode**: `Cmd/Ctrl+Period`
+
+When in PRESET mode:
+
+- Editor hides, diagram goes full screen
+- Drag nodes to reposition them
+- Positions automatically update in the `# PRESET` section
+- Pan/zoom and wait 1 second to capture viewport with `@view`
+- Press `Escape` to exit
+
+### Complete PRESET Example
+
+```
+Welcome Introduction
+A Concept 1
+B Concept 2
+C Concept 3
+
+A -> B relates
+B -> C extends
+
+# PRESET
+
+@view (45, 50, 0.9)
+
+Welcome (50, 15)
+A (25, 50)
+B (75, 50)
+C (50, 80)
+
+# SLIDES
+
+Welcome
+---
+A
+B
+---
+C
+```
+
+This creates a custom layout for the main view while still allowing slide-specific positions.
+
+## Prose Styling
+
+Expandable prose sections support custom styling via a `.style { }` block at the beginning:
+
+```
+# NodeId
+
+.style { font-family: Roboto; font-size: 18px; color: #aaf; prose-height: 500px; }
+
+Your markdown content here with **bold** and `code`.
+
+Multiple paragraphs are supported.
+
+---
+```
+
+### Available Properties
+
+- **Standard CSS**: `font-family`, `font-size`, `color`, `line-height`, etc.
+- **Custom property**: `prose-height` - Sets the foreignObject height in pixels (controls when scrollbars appear)
+
+Example:
+
+```
+# Details
+
+.style { font-size: 20px; line-height: 1.8; prose-height: 600px; }
+
+This node has larger text with more spacing and a taller container.
+
+---
+```
+
 ## Keyboard Shortcuts
 
 | Shortcut            | Action                                                   |
@@ -397,9 +526,11 @@ This creates 5 slides:
 | `Cmd/Ctrl+N`        | New diagram                                              |
 | `Cmd+E`             | Export (HTML in editor mode, PNG slides in present mode) |
 | `Cmd/Ctrl+Enter`    | Toggle presentation mode                                 |
-| `Escape`            | Exit presentation mode                                   |
+| `Cmd/Ctrl+Period`   | Toggle PRESET mode                                       |
+| `Escape`            | Exit presentation mode or PRESET mode                    |
 | `→` / `Space` / `.` | Next slide (in present mode)                             |
 | `←` / `,`           | Previous slide (in present mode)                         |
+| `Cmd/Ctrl+Shift+Q`  | Toggle quiz mode                                         |
 
 ## Styling Tips
 

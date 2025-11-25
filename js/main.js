@@ -24,7 +24,6 @@ import {
   exportStandaloneHTML,
   exportSlidesAsSVG,
 } from "./modules/file.js";
-import { compactDiagramData } from "./modules/initial-data.js";
 import { loadIconMap } from "./modules/icon-map-loader.js";
 import { startQuizMode, stopQuizMode } from "./modules/quiz.js";
 
@@ -32,8 +31,17 @@ async function initializeApp() {
   const iconMap = await loadIconMap();
   setIconMap(iconMap); // Pass the dynamically loaded map to the diagram module
 
-  setupEditor(compactDiagramData);
-  updateDiagram(parseCompactFormat(compactDiagramData).nodes);
+  // Load the basic example file as initial content
+  let initialContent = "Welcome Welcome to YACME!";
+  try {
+    const response = await fetch("examples/basic.cmap");
+    initialContent = await response.text();
+  } catch (error) {
+    console.error("Failed to load basic.cmap:", error);
+  }
+
+  setupEditor(initialContent);
+  updateDiagram(parseCompactFormat(initialContent).nodes);
   initSlideControls(); // Initialize slide navigation buttons
   openLastFile();
 

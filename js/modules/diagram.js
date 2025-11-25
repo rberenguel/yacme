@@ -495,7 +495,17 @@ function updateDiagramAppearance() {
     if (d.expanded) {
       // Calculate height based on prose content for expanded nodes
       if (d.prose) {
-        const proseHeight = estimateProseHeight(d.prose, 320);
+        let proseHeight;
+        // Check if custom prose-height is set in proseStyle
+        if (d.proseStyle) {
+          const heightMatch = d.proseStyle.match(/prose-height:\s*(\d+)px/);
+          if (heightMatch) {
+            proseHeight = parseInt(heightMatch[1], 10);
+          }
+        }
+        if (!proseHeight) {
+          proseHeight = estimateProseHeight(d.prose, 320);
+        }
         // Add space for title at top (~50px)
         d.height = proseHeight + 50;
       } else {
@@ -533,18 +543,27 @@ function updateDiagramAppearance() {
     .filter((d) => d.expanded)
     .append("foreignObject")
     .attr("width", (d) => d.width - 20)
-    .attr("height", (d) => {
-      if (d.prose) {
-        return estimateProseHeight(d.prose, 320);
-      }
-      return 110;
-    })
     .attr("x", (d) => -d.width / 2 + 10)
     .attr("y", (d) => -d.height / 2 + 40)
     .style("opacity", 0)
     .call((fo) => fo.transition().duration(400).style("opacity", 1))
+    .each(function (d) {
+      // Extract prose-height from proseStyle if present
+      let foreignObjectHeight;
+      if (d.proseStyle) {
+        const heightMatch = d.proseStyle.match(/prose-height:\s*(\d+)px/);
+        if (heightMatch) {
+          foreignObjectHeight = parseInt(heightMatch[1], 10);
+        }
+      }
+      if (!foreignObjectHeight) {
+        foreignObjectHeight = d.prose ? estimateProseHeight(d.prose, 320) : 110;
+      }
+      d3.select(this).attr("height", foreignObjectHeight);
+    })
     .append("xhtml:div")
     .attr("class", "prose-content")
+    .attr("style", (d) => d.proseStyle || null)
     .html((d) => d.prose);
 
   // Force link position recalculation after node size changes
@@ -628,9 +647,15 @@ function drag(simulation) {
     if (!event.active) simulation.alphaTarget(0);
     d3.select(this).classed("grabbing", false);
 
-    // Convert pixel position to percentage
-    const percentX = Math.round((d.fx / width) * 100);
-    const percentY = Math.round((d.fy / height) * 100);
+    // Convert pixel position to percentage and clamp to 0-100 range
+    const percentX = Math.max(
+      0,
+      Math.min(100, Math.round((d.fx / width) * 100)),
+    );
+    const percentY = Math.max(
+      0,
+      Math.min(100, Math.round((d.fy / height) * 100)),
+    );
 
     // If in PRESET mode, update PRESET
     if (presetMode) {

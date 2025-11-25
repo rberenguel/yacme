@@ -1,4 +1,3 @@
-export const compactDiagramData = `
 - nodeStyle="fill: #1a1a2e; stroke: #2aa198;"
 - labelStyle="fill: #93a1a1; font-family: OstrichSans; font-size: 30px;"
 - edgeStyle="stroke: #cb4b16; stroke-width: 2;"
@@ -11,12 +10,14 @@ Welcome :home: Welcome to YACME!
 
 # Welcome
 
+.style { font-family: Roboto; font-size: 16px; color: #aaaaff; prose-height: 400px; }
+
 YACME is a live-editing concept map and diagramming tool.
 
 **Try these shortcuts:**
-- Cmd/Ctrl+S to Save
-- Cmd/Ctrl+O to Open
-- Cmd/Ctrl+Enter to start Present Mode!
+- `Cmd/Ctrl+S` to Save
+- `Cmd/Ctrl+O` to Open
+- `Cmd/Ctrl+Enter` to start Present Mode!
 
 Edit this text and watch the diagram update in real-time.
 
@@ -65,4 +66,3 @@ D -> A
 
 A -> C
 ~Welcome
-`;

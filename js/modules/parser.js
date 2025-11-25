@@ -132,13 +132,17 @@ export function parseCompactFormat(text) {
 
     // Handle PRESET parsing
     if (parsingPreset) {
-      if (trimmedLine === "" || trimmedLine.startsWith("{") || trimmedLine.startsWith("}")) {
+      if (
+        trimmedLine === "" ||
+        trimmedLine.startsWith("{") ||
+        trimmedLine.startsWith("}")
+      ) {
         continue;
       }
       // Parse @view directive
       if (trimmedLine.startsWith("@view")) {
         const viewMatch = trimmedLine.match(
-          /@view\s*\((\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\)/,
+          /@view\s*\((-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\)/,
         );
         if (viewMatch) {
           presetViewTransform = {
@@ -150,7 +154,9 @@ export function parseCompactFormat(text) {
         continue;
       }
       // Parse node position: NodeId (x, y)
-      const posMatch = trimmedLine.match(/^(\S+)\s*\((\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\)/);
+      const posMatch = trimmedLine.match(
+        /^(\S+)\s*\((-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\)/,
+      );
       if (posMatch) {
         const nodeId = posMatch[1];
         const x = parseFloat(posMatch[2]);
@@ -201,7 +207,7 @@ export function parseCompactFormat(text) {
       if (trimmedLine.startsWith("@view")) {
         // Viewport transform: @view (centerX%, centerY%, scale)
         const viewMatch = trimmedLine.match(
-          /@view\s*\((\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\)/,
+          /@view\s*\((-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\)/,
         );
         if (viewMatch) {
           currentSlide.viewTransform = {
@@ -234,7 +240,7 @@ export function parseCompactFormat(text) {
         } else {
           // Highlight node (possibly with position)
           const positionMatch = content.match(
-            /^(\S+)\s*\((\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\)$/,
+            /^(\S+)\s*\((-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\)$/,
           );
           if (positionMatch) {
             const nodeId = positionMatch[1];
@@ -281,7 +287,7 @@ export function parseCompactFormat(text) {
         // Node reference (possibly with position)
         // Check for position syntax: NodeId (x, y)
         const positionMatch = trimmedLine.match(
-          /^([+~]?)(\S+)\s*\((\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\)$/,
+          /^([+~]?)(\S+)\s*\((-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\)$/,
         );
         if (positionMatch) {
           const prefix = positionMatch[1];
@@ -323,11 +329,26 @@ export function parseCompactFormat(text) {
     if (trimmedLine.startsWith("---") && parsingProseForNode) {
       // End of prose section - convert accumulated markdown to HTML
       const node = ensureNode(parsingProseForNode);
-      if (typeof marked !== 'undefined') {
+
+      // Check for .style { ... } at the beginning of prose
+      const styleMatch = proseMarkdown.match(/^\s*\.style\s*\{([^}]+)\}\s*\n?/);
+      if (styleMatch) {
+        // Extract all CSS properties (including custom prose-height)
+        node.proseStyle = styleMatch[1].trim();
+        proseMarkdown = proseMarkdown.replace(
+          /^\s*\.style\s*\{[^}]+\}\s*\n?/,
+          "",
+        );
+      }
+
+      if (typeof marked !== "undefined") {
         node.prose = marked.parse(proseMarkdown.trim());
       } else {
         // Fallback if marked is not available
-        node.prose = proseMarkdown.split('\n').map(line => `<p>${line}</p>`).join('');
+        node.prose = proseMarkdown
+          .split("\n")
+          .map((line) => `<p>${line}</p>`)
+          .join("");
       }
       parsingProseForNode = null;
       proseMarkdown = "";
@@ -489,12 +510,15 @@ export function parseCompactFormat(text) {
   return {
     nodes: Array.from(nodesMap.values()),
     slides: slides.length > 0 ? slides : null,
-    preset: presetLineStart !== null ? {
-      positions: presetPositions,
-      viewTransform: presetViewTransform,
-      lineStart: presetLineStart,
-      lineEnd: presetLineEnd
-    } : null,
+    preset:
+      presetLineStart !== null
+        ? {
+            positions: presetPositions,
+            viewTransform: presetViewTransform,
+            lineStart: presetLineStart,
+            lineEnd: presetLineEnd,
+          }
+        : null,
   };
 }
 

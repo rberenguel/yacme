@@ -7,7 +7,6 @@ import {
   getCurrentSlideIndex,
 } from "./diagram.js";
 import { createStandaloneHTML } from "./html-exporter.js";
-import { compactDiagramData } from "./initial-data.js";
 
 let fileHandle = null;
 let currentFileName = "concept-map.cmap";
@@ -180,20 +179,42 @@ export async function openLastFile() {
   }
 }
 
-export function newFile() {
+export async function newFile() {
   const editorView = getEditorView();
-  editorView.dispatch({
-    changes: {
-      from: 0,
-      to: editorView.state.doc.length,
-      insert: compactDiagramData,
-    },
-  });
-  fileHandle = null;
-  currentFileName = "concept-map.cmap";
-  set("lastFile", null);
-  set("lastFileContent", compactDiagramData);
-  set("lastFileName", null);
+
+  try {
+    const response = await fetch("examples/basic.cmap");
+    const basicContent = await response.text();
+
+    editorView.dispatch({
+      changes: {
+        from: 0,
+        to: editorView.state.doc.length,
+        insert: basicContent,
+      },
+    });
+    fileHandle = null;
+    currentFileName = "concept-map.cmap";
+    set("lastFile", null);
+    set("lastFileContent", basicContent);
+    set("lastFileName", null);
+  } catch (error) {
+    console.error("Failed to load basic.cmap:", error);
+    // Fallback to empty diagram
+    const fallback = "Welcome Welcome to YACME!";
+    editorView.dispatch({
+      changes: {
+        from: 0,
+        to: editorView.state.doc.length,
+        insert: fallback,
+      },
+    });
+    fileHandle = null;
+    currentFileName = "concept-map.cmap";
+    set("lastFile", null);
+    set("lastFileContent", fallback);
+    set("lastFileName", null);
+  }
 }
 
 export async function exportStandaloneHTML() {

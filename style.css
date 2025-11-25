@@ -113,6 +113,26 @@ svg {
 .prose-content a {
   color: #c60;
 }
+.prose-content code {
+  background-color: #2a2a3e;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: "Monoid", monospace;
+  font-size: 0.9em;
+  filter: hue-rotate(15deg);
+}
+.prose-content pre {
+  background-color: #2a2a3e;
+  padding: 10px;
+  border-radius: 4px;
+  overflow-x: auto;
+  filter: hue-rotate(15deg);
+}
+.prose-content pre code {
+  background-color: transparent;
+  padding: 0;
+  filter: none;
+}
 .prose-content::-webkit-scrollbar {
   width: 8px;
 }
