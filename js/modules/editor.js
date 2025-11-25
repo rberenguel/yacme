@@ -17,6 +17,7 @@ import { parseCompactFormat, computeCumulativeSlides } from "./parser.js";
 import {
   updateDiagram,
   setSlideContext,
+  setPresetContext,
   cacheFullNodeData,
   isPresentMode,
 } from "./diagram.js";
@@ -78,12 +79,16 @@ export function setupEditor(initialDoc) {
                 );
               }
 
+              // Set preset context
+              setPresetContext(parsedData.preset);
+
               // Determine which slide the cursor is in
               let currentSlideIndex = null;
               if (cumulativeSlides) {
                 const cursorLine = update.state.doc.lineAt(
                   update.state.selection.main.head,
                 ).number;
+
                 for (let i = 0; i < cumulativeSlides.length; i++) {
                   const slide = cumulativeSlides[i];
                   if (
@@ -118,14 +123,14 @@ export function setupEditor(initialDoc) {
                   setSlideContext(cumulativeSlides, currentSlideIndex);
                 }
                 updateDiagram(parsedData.nodes);
-              } else if (
-                update.selectionSet &&
-                currentSlideIndex !== null &&
-                !isPresentMode()
-              ) {
-                // Cursor moved, update slide preview (only when not in present mode)
-                setSlideContext(cumulativeSlides, currentSlideIndex);
-                updateDiagram(parsedData.nodes);
+              } else if (update.selectionSet && !isPresentMode()) {
+                // Cursor moved - update both slide and preset context
+                if (currentSlideIndex !== null) {
+                  // Update slide preview when cursor in slides
+                  setSlideContext(cumulativeSlides, currentSlideIndex);
+                  updateDiagram(parsedData.nodes);
+                }
+                // Preset context already updated above
               }
             } catch (e) {
               console.error("Error parsing diagram text:", e);
@@ -289,6 +294,66 @@ export function updateNodePositionInEditor(
   });
 }
 
+/**
+ * Updates a node's position in the PRESET section.
+ * @param {string} nodeId - The node identifier
+ * @param {number} percentX - X position as percentage (0-100)
+ * @param {number} percentY - Y position as percentage (0-100)
+ */
+export function updateNodePositionInPreset(nodeId, percentX, percentY) {
+  const editor = getEditorView();
+  const doc = editor.state.doc;
+  const parsedData = currentParsedData;
+
+  if (!parsedData || !parsedData.preset) return;
+
+  const presetStart = parsedData.preset.lineStart + 1; // Convert to 1-based
+  const presetEnd = parsedData.preset.lineEnd;
+
+  // Search for existing node position in PRESET
+  let foundLine = null;
+  let lineText = null;
+
+  for (let lineNum = presetStart; lineNum <= presetEnd; lineNum++) {
+    if (lineNum > doc.lines) break;
+    const line = doc.line(lineNum);
+    const trimmed = line.text.trim();
+
+    // Check if this line is for our node: NodeId (x, y)
+    const posMatch = trimmed.match(/^(\S+)\s*\(/);
+    if (posMatch && posMatch[1] === nodeId) {
+      foundLine = lineNum;
+      lineText = line.text;
+      break;
+    }
+  }
+
+  if (foundLine !== null) {
+    // Update existing position
+    const leadingWhitespace = lineText.match(/^\s*/)[0];
+    const newText = `${leadingWhitespace}${nodeId} (${percentX}, ${percentY})`;
+    const line = doc.line(foundLine);
+    editor.dispatch({
+      changes: {
+        from: line.from,
+        to: line.to,
+        insert: newText,
+      },
+    });
+  } else {
+    // Add new position at the end of PRESET section
+    const insertLine = doc.line(presetEnd);
+    const newText = `${nodeId} (${percentX}, ${percentY})\n`;
+    editor.dispatch({
+      changes: {
+        from: insertLine.to,
+        to: insertLine.to,
+        insert: newText,
+      },
+    });
+  }
+}
+
 // Track last update to prevent duplicates during re-parsing
 let lastViewUpdate = { slideIndex: -1, text: "", timestamp: 0 };
 
@@ -378,6 +443,87 @@ export function updateViewTransformInEditor(
   }
 
   lastViewUpdate = { slideIndex, text: viewText, timestamp: now };
+}
+
+// Track last preset view update to prevent duplicates during re-parsing
+let lastPresetViewUpdate = { text: "", timestamp: 0 };
+
+/**
+ * Updates or adds a @view directive for the PRESET section
+ * @param {number} centerX - Center X position as percentage (0-100)
+ * @param {number} centerY - Center Y position as percentage (0-100)
+ * @param {number} scale - Zoom scale (e.g., 0.8, 1.5)
+ */
+export function updatePresetViewTransform(centerX, centerY, scale) {
+  const editor = getEditorView();
+  const doc = editor.state.doc;
+  const parsedData = currentParsedData;
+
+  if (!parsedData || !parsedData.preset) return;
+
+  const viewText = `@view (${centerX.toFixed(1)}, ${centerY.toFixed(1)}, ${scale.toFixed(2)})`;
+
+  // Prevent duplicate updates within 500ms
+  const now = Date.now();
+  if (
+    lastPresetViewUpdate.text === viewText &&
+    now - lastPresetViewUpdate.timestamp < 500
+  ) {
+    return;
+  }
+
+  // Parser uses 0-based line numbers, CodeMirror uses 1-based
+  const startLine = parsedData.preset.lineStart + 1;
+  const endLine = parsedData.preset.lineEnd + 1;
+
+  // Search for existing @view directive in PRESET section
+  let foundViewLine = null;
+  for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
+    if (lineNum > doc.lines) break; // Safety check
+    const line = doc.line(lineNum);
+    const trimmed = line.text.trim();
+    if (trimmed.startsWith("@view")) {
+      foundViewLine = lineNum;
+      break;
+    }
+  }
+
+  // Check if the existing @view is already what we want
+  if (foundViewLine !== null) {
+    const line = doc.line(foundViewLine);
+    if (line.text.trim() === viewText) {
+      // Already up to date, no need to change
+      lastPresetViewUpdate = { text: viewText, timestamp: now };
+      return;
+    }
+  }
+
+  if (foundViewLine !== null) {
+    // Update existing @view directive
+    const line = doc.line(foundViewLine);
+    const leadingWhitespace = line.text.match(/^\s*/)[0];
+    editor.dispatch({
+      changes: {
+        from: line.from,
+        to: line.to,
+        insert: `${leadingWhitespace}${viewText}`,
+      },
+    });
+  } else {
+    // Add new @view directive at the start of the PRESET section
+    // Insert after the "# PRESET" header line
+    const insertLine = doc.line(startLine);
+    const leadingWhitespace = insertLine.text.match(/^\s*/)[0];
+    editor.dispatch({
+      changes: {
+        from: insertLine.to,
+        to: insertLine.to,
+        insert: `\n${leadingWhitespace}${viewText}`,
+      },
+    });
+  }
+
+  lastPresetViewUpdate = { text: viewText, timestamp: now };
 }
 
 /**

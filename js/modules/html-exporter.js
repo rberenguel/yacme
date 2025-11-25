@@ -155,7 +155,7 @@ export function createStandaloneHTML(
         // The original diagram text content
         const diagramText = \`${diagramText.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$/g, "\\$")}\`;
 
-        // Parse the diagram text to get slides if they exist
+        // Parse the diagram text to get slides and preset if they exist
         const parsedData = parseCompactFormat(diagramText);
         let cumulativeSlides = null;
         if (parsedData.slides) {
@@ -163,6 +163,11 @@ export function createStandaloneHTML(
             setSlideContext(cumulativeSlides, null);
             cacheFullNodeData(parsedData.nodes);
             initSlideControls();
+        }
+
+        // Set preset context if available
+        if (parsedData.preset) {
+            setPresetContext(parsedData.preset);
         }
 
         // Use the parsed nodes from the diagram text, not the pre-processed data

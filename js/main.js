@@ -7,6 +7,8 @@ import {
   initSlideControls,
   setPresentMode,
   isPresentMode,
+  togglePresetMode,
+  isPresetMode,
   hasSlides,
   goToSlide,
   getCurrentSlideIndex,
@@ -93,10 +95,20 @@ window.addEventListener("keydown", (e) => {
       setPresentMode(!isPresentMode());
     }
   }
-  // Escape to exit present mode
-  if (e.key === "Escape" && isPresentMode()) {
+  // Preset mode toggle (Cmd/Ctrl+Period)
+  if ((e.metaKey || e.ctrlKey) && e.key === ".") {
     e.preventDefault();
-    setPresentMode(false);
+    togglePresetMode();
+  }
+  // Escape to exit present mode or preset mode
+  if (e.key === "Escape") {
+    if (isPresentMode()) {
+      e.preventDefault();
+      setPresentMode(false);
+    } else if (isPresetMode()) {
+      e.preventDefault();
+      togglePresetMode();
+    }
   }
   // Slide navigation in present mode
   if (isPresentMode()) {

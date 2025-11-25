@@ -4,6 +4,7 @@ import {
   highlightNodeInEditor,
   clearHighlightInEditor,
   updateNodePositionInEditor,
+  updateNodePositionInPreset,
   updateAllViewTransformsInEditor,
 } from "./editor.js";
 const svg = d3.select("#diagram-container");
@@ -19,6 +20,8 @@ let iconMap = {}; // This will hold the map loaded by main.js
 let allSlides = null; // All cumulative slides
 let currentSlideIndex = null; // Current slide being viewed/edited
 let presentMode = false; // Whether we're in presentation mode
+let presetMode = false; // Whether we're in PRESET editing mode
+let presetData = null; // Preset positions data
 
 svg.on("click", (event) => {
   if (event.target === svg.node()) {
@@ -44,6 +47,84 @@ export function setSlideContext(slides, slideIndex) {
   if (slideIndex !== undefined) {
     currentSlideIndex = slideIndex;
   }
+}
+
+/**
+ * Sets the preset data.
+ * @param {Object} preset - Preset data with positions, lineStart, lineEnd
+ */
+export function setPresetContext(preset) {
+  presetData = preset;
+}
+
+/**
+ * Toggles PRESET editing mode.
+ */
+export function togglePresetMode() {
+  if (!presetData) {
+    console.log("No PRESET section found in diagram");
+    return;
+  }
+
+  presetMode = !presetMode;
+
+  if (presetMode) {
+    // Entering preset mode - hide editor and show diagram full screen
+    const editorPane = document.getElementById("editor-pane");
+    const resizer = document.getElementById("resizer");
+    if (editorPane) editorPane.style.display = "none";
+    if (resizer) resizer.style.display = "none";
+
+    // Add visual indicator
+    document.body.classList.add("preset-mode");
+
+    console.log("PRESET mode enabled - drag nodes to position them");
+  } else {
+    // Exiting preset mode - capture and save viewport, restore editor
+    capturePresetViewport();
+
+    const editorPane = document.getElementById("editor-pane");
+    const resizer = document.getElementById("resizer");
+    if (editorPane) editorPane.style.display = "";
+    if (resizer) resizer.style.display = "";
+
+    document.body.classList.remove("preset-mode");
+
+    console.log("PRESET mode disabled");
+  }
+}
+
+/**
+ * Captures the current viewport and writes it to PRESET section
+ */
+function capturePresetViewport() {
+  // Get current transform
+  const transform = d3.zoomTransform(svg.node());
+  const scale = transform.k;
+  const translateX = transform.x;
+  const translateY = transform.y;
+
+  // Calculate the center point in the coordinate space
+  const viewportCenterX = width / 2;
+  const viewportCenterY = height / 2;
+  const targetX = (viewportCenterX - translateX) / scale;
+  const targetY = (viewportCenterY - translateY) / scale;
+
+  // Convert to percentages
+  const centerX = (targetX / width) * 100;
+  const centerY = (targetY / height) * 100;
+
+  // Import and call the editor function to write the view
+  import("./editor.js").then((module) => {
+    module.updatePresetViewTransform(centerX, centerY, scale);
+  });
+}
+
+/**
+ * Returns whether we're in PRESET mode.
+ */
+export function isPresetMode() {
+  return presetMode;
 }
 
 /**
@@ -547,12 +628,16 @@ function drag(simulation) {
     if (!event.active) simulation.alphaTarget(0);
     d3.select(this).classed("grabbing", false);
 
-    // If in present mode, update the slide text with new position
-    if (presentMode && currentSlideIndex !== null && allSlides) {
-      // Convert pixel position to percentage
-      const percentX = Math.round((d.fx / width) * 100);
-      const percentY = Math.round((d.fy / height) * 100);
+    // Convert pixel position to percentage
+    const percentX = Math.round((d.fx / width) * 100);
+    const percentY = Math.round((d.fy / height) * 100);
 
+    // If in PRESET mode, update PRESET
+    if (presetMode) {
+      updateNodePositionInPreset(d.id, percentX, percentY);
+    }
+    // Otherwise, if in present mode, update the slide text with new position
+    else if (presentMode && currentSlideIndex !== null && allSlides) {
       // Find the most recent slide where this node was explicitly added
       // (not just visible from a previous slide)
       // This handles the case where a node is excluded and re-added
@@ -712,14 +797,25 @@ export function updateDiagram(newData) {
   );
   dagre.layout(g);
 
-  // Apply positions from slide if available
+  // Apply positions from slide if available, or from PRESET if not in slide mode
   const slideData = getCurrentSlide();
   const slidePositions = slideData?.nodePositions || {};
+  const presetPositions = presetData?.positions || new Map();
 
   nodes.forEach((node) => {
-    // Check if this node has a position defined in the current slide
+    // Priority: slide positions > preset positions > dagre layout
     if (slidePositions[node.id]) {
+      // Slide position takes priority
       const pos = slidePositions[node.id];
+      // Convert percentage to pixel coordinates
+      node.x = (pos.x / 100) * width;
+      node.y = (pos.y / 100) * height;
+      // Set fixed position so force simulation doesn't move it
+      node.fx = node.x;
+      node.fy = node.y;
+    } else if (!currentSlideIndex && presetPositions.has(node.id)) {
+      // Use PRESET position when not in slide mode
+      const pos = presetPositions.get(node.id);
       // Convert percentage to pixel coordinates
       node.x = (pos.x / 100) * width;
       node.y = (pos.y / 100) * height;
@@ -983,5 +1079,10 @@ export function updateDiagram(newData) {
     simulation.alpha(0.8).restart();
   } else {
     ticked();
+  }
+
+  // Apply PRESET view transform if in main view (not in slides) and preset has view
+  if (!currentSlideIndex && presetData?.viewTransform) {
+    applyViewTransform(presetData.viewTransform);
   }
 }

@@ -13,6 +13,11 @@ export function parseCompactFormat(text) {
   const nodesMap = new Map();
   let parsingProseForNode = null;
   let proseMarkdown = ""; // Accumulate prose as markdown
+  let parsingPreset = false;
+  let presetPositions = new Map(); // nodeId -> {x, y}
+  let presetViewTransform = null; // {centerX, centerY, scale}
+  let presetLineStart = null;
+  let presetLineEnd = null;
   let parsingSlides = false;
   const slides = [];
   let currentSlide = null;
@@ -96,8 +101,19 @@ export function parseCompactFormat(text) {
       inPreamble = false;
     }
 
-    // Check for SLIDES marker
+    // Check for PRESET marker
+    if (trimmedLine === "# PRESET") {
+      parsingPreset = true;
+      presetLineStart = lineNumber;
+      continue;
+    }
+
+    // Check for SLIDES marker (ends PRESET if active)
     if (trimmedLine === "# SLIDES") {
+      if (parsingPreset) {
+        presetLineEnd = lineNumber - 1;
+        parsingPreset = false;
+      }
       parsingSlides = true;
       currentSlide = {
         nodes: [],
@@ -111,6 +127,36 @@ export function parseCompactFormat(text) {
         viewTransform: null,
         lineStart: lineNumber + 1, // Start from the line after # SLIDES
       };
+      continue;
+    }
+
+    // Handle PRESET parsing
+    if (parsingPreset) {
+      if (trimmedLine === "" || trimmedLine.startsWith("{") || trimmedLine.startsWith("}")) {
+        continue;
+      }
+      // Parse @view directive
+      if (trimmedLine.startsWith("@view")) {
+        const viewMatch = trimmedLine.match(
+          /@view\s*\((\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\)/,
+        );
+        if (viewMatch) {
+          presetViewTransform = {
+            centerX: parseFloat(viewMatch[1]),
+            centerY: parseFloat(viewMatch[2]),
+            scale: parseFloat(viewMatch[3]),
+          };
+        }
+        continue;
+      }
+      // Parse node position: NodeId (x, y)
+      const posMatch = trimmedLine.match(/^(\S+)\s*\((\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\)/);
+      if (posMatch) {
+        const nodeId = posMatch[1];
+        const x = parseFloat(posMatch[2]);
+        const y = parseFloat(posMatch[3]);
+        presetPositions.set(nodeId, { x, y });
+      }
       continue;
     }
 
@@ -435,9 +481,20 @@ export function parseCompactFormat(text) {
     slides.push(currentSlide);
   }
 
+  // If at end of file and still in PRESET, close it
+  if (parsingPreset) {
+    presetLineEnd = lineNumber;
+  }
+
   return {
     nodes: Array.from(nodesMap.values()),
     slides: slides.length > 0 ? slides : null,
+    preset: presetLineStart !== null ? {
+      positions: presetPositions,
+      viewTransform: presetViewTransform,
+      lineStart: presetLineStart,
+      lineEnd: presetLineEnd
+    } : null,
   };
 }
 

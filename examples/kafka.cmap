@@ -11,61 +11,33 @@ Welcome Diagram about\nKafka stuff ; labelStyle="fill: #c6c; font-size: 40px;" c
 
 # Topics
 
-The main abstraction in Kafka. **Topics** are feeds of messages that producers write to and consumers read from.
-
-Key characteristics:
-- Named streams of data
-- Can have multiple producers and consumers
-- Persistent and durable
+The main abstraction in Kafka. Topics are feeds of messages that producers write to and consumers read from.
 
 ---
 
 # Partitions
 
-Topics are divided into **partitions** for scalability and parallelism.
-
-Each partition is an ordered, immutable sequence of records with:
-- Sequential offset numbering
-- Total ordering within partition
-- Distributed across brokers
+Topics are divided into partitions for scalability and parallelism. Each partition is an ordered, immutable sequence of records.
 
 ---
 
 # Records
 
-Individual messages in Kafka. Each record consists of:
-- **Key**: Optional, determines partition
-- **Value**: The actual message payload
-- **Timestamp**: When the record was produced
-- **Headers**: Optional metadata
 
-Records are immutable once written.
+Individual messages in Kafka. Each record consists of a key, a value, a timestamp, and optional headers.
 
 ---
 
 # Consumers
 
-Applications that read data from Kafka topics.
 
-Consumers can be organized into **consumer groups** for:
-- Parallel processing
-- Load balancing
-- Fault tolerance
-
-Each partition is consumed by exactly one consumer in a group.
+Applications that read data from Kafka topics. Consumers can be organized into consumer groups for parallel processing.
 
 ---
 
 # Offset
 
-A unique sequential ID assigned to each record within a partition.
-
-Consumers use offsets to:
-- Track their position in the log
-- Resume from last processed message
-- Rewind to reprocess data
-
-Stored in special `__consumer_offsets` topic.
+A unique sequential ID assigned to each record within a partition. Consumers use offsets to track their position in the log.
 
 ---
 
@@ -112,6 +84,29 @@ Consumers -> Offset keep track of
 Offset -> Internal is stored in ; nodeStyle="stroke: #268bd2;"
 Offset -> Ordered requires
 sp -> Ordered is completely ; arrowColor="#2aa198"
+
+# PRESET
+
+@view (44.0, 51.9, 0.75)
+
+cg (81, 28)
+Topics (49, 5)
+User (45, 11)
+Consumers (67, 30)
+Internal (25, 23)
+Partitions (47, 24)
+Offset (16, 37)
+Records (16, 85)
+Welcome (8, 14)
+Ordered (3, 68)
+sp (12, 100)
+sk (41, 99)
+Time (2, 45)
+kv (33, 81)
+Expiration (29, 44)
+ret (58, 47)
+Compaction (72, 69)
+Tombstone (52, 72)
 
 # SLIDES
 

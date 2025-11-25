@@ -33,6 +33,13 @@ A -> C direct ; arrow="none" nodeStyle="stroke: #dc322f; stroke-dasharray: 2,2;"
 *D Only in a slide
 *D -> A
 
+# PRESET
+
+Welcome (50, 20)
+A (25, 50)
+B (75, 50)
+C (50, 75)
+
 # SLIDES
 
 Welcome
