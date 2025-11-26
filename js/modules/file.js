@@ -422,6 +422,11 @@ async function svgToCanvas(svgElement, width, height) {
       // Clone the SVG to avoid modifying the original
       const svgClone = svgElement.cloneNode(true);
 
+      // Remove foreignObject elements for SVG approach - they cause tainted canvas
+      // The html2canvas fallback will handle slides with foreignObjects
+      const foreignObjects = svgClone.querySelectorAll("foreignObject");
+      foreignObjects.forEach((fo) => fo.remove());
+
       // Set explicit dimensions
       svgClone.setAttribute("width", width);
       svgClone.setAttribute("height", height);
@@ -450,12 +455,16 @@ async function svgToCanvas(svgElement, width, height) {
           src: url('data:font/woff2;base64,${iconoirFontBase64}') format('woff2');
         }
         @font-face {
-          font-family: 'Ostrich Sans Inline Medium';
+          font-family: 'OstrichSans';
           src: url('data:font/opentype;base64,${ostrichsansBase64Module.ostrichSansMediumBase64.replace(/\s/g, "")}') format('opentype');
+          font-weight: 500;
+          font-style: normal;
         }
         @font-face {
-          font-family: 'Ostrich Sans Inline Heavy';
+          font-family: 'OstrichSans';
           src: url('data:font/opentype;base64,${ostrichsansBase64Module.ostrichSansHeavyBase64.replace(/\s/g, "")}') format('opentype');
+          font-weight: 700;
+          font-style: normal;
         }
 
         /* Set default font for SVG */
@@ -611,19 +620,143 @@ export async function exportSlidesAsSVG() {
       await new Promise((resolve) => setTimeout(resolve, 600));
 
       try {
-        // Render to canvas
-        const canvas = await renderDiagramToCanvas();
+        // Check if this slide has foreignObjects (expanded prose nodes)
+        const svg = document.getElementById("diagram-container");
+        const foreignObjects = svg.querySelectorAll("foreignObject");
+        const hasForeignObjects = foreignObjects.length > 0;
 
-        // Convert canvas to blob
-        const blob = await new Promise((resolve) => {
-          canvas.toBlob(resolve, "image/png");
-        });
+        if (hasForeignObjects) {
+          // Skip straight to composite approach for slides with expanded content
+          console.warn(`Slide ${i + 1} contains expanded content - using composite approach`);
 
-        // Add to ZIP with zero-padded filename
-        const slideNumber = String(i + 1).padStart(3, "0");
-        zip.file(`slide-${slideNumber}.png`, blob);
+          if (typeof html2canvas === "undefined") {
+            throw new Error("html2canvas library not loaded");
+          }
+
+          const diagramPane = document.querySelector(".diagram-pane");
+          const width = diagramPane.clientWidth;
+          const height = diagramPane.clientHeight;
+
+          // First, render the SVG without foreignObjects (clean base)
+          const baseCanvas = await renderDiagramToCanvas();
+          const scale = 2; // Match the 2x scale from base canvas
+          const compositeCanvas = document.createElement("canvas");
+          compositeCanvas.width = width * scale;
+          compositeCanvas.height = height * scale;
+          const ctx = compositeCanvas.getContext("2d");
+
+          // Draw the base SVG first
+          ctx.drawImage(baseCanvas, 0, 0);
+
+          // Now render each foreignObject
+          for (const fo of foreignObjects) {
+                // Get both untransformed and transformed dimensions
+                const foWidth = parseFloat(fo.getAttribute("width"));
+                const foHeight = parseFloat(fo.getAttribute("height"));
+
+                const svgRect = svg.getBoundingClientRect();
+                const foAbsoluteRect = fo.getBoundingClientRect();
+                const relativeX = foAbsoluteRect.left - svgRect.left;
+                const relativeY = foAbsoluteRect.top - svgRect.top;
+
+                // Use the UNTRANSFORMED dimensions for the tempWrapper
+                // so text/content renders at the correct size
+                // We'll scale it down when compositing to match the transformed size
+                const actualWidth = foAbsoluteRect.width;
+                const actualHeight = foAbsoluteRect.height;
+
+                // Create a temporary wrapper with ORIGINAL dimensions
+                const tempWrapper = document.createElement("div");
+                tempWrapper.style.position = "absolute";
+                tempWrapper.style.left = "-9999px";
+                tempWrapper.style.top = "0";
+                tempWrapper.style.width = `${foWidth}px`;
+                tempWrapper.style.height = `${foHeight}px`;
+                tempWrapper.style.overflow = "hidden";
+                tempWrapper.style.background = "transparent";
+
+                // Debug: log what we're getting
+                console.log("ForeignObject innerHTML:", fo.innerHTML);
+                console.log("ForeignObject attribute dimensions:", {
+                  width: parseFloat(fo.getAttribute("width")),
+                  height: parseFloat(fo.getAttribute("height")),
+                  x: parseFloat(fo.getAttribute("x")),
+                  y: parseFloat(fo.getAttribute("y"))
+                });
+                console.log("ForeignObject ACTUAL rendered rect:", foAbsoluteRect);
+                console.log("TempWrapper will be created with ACTUAL dimensions:", {
+                  width: `${actualWidth}px`,
+                  height: `${actualHeight}px`,
+                  overflow: 'hidden'
+                });
+
+                // Just copy the innerHTML directly - don't copy computed styles
+                // The styles should come from the CSS that's already loaded in the page
+                tempWrapper.innerHTML = fo.innerHTML;
+
+                document.body.appendChild(tempWrapper);
+
+                // Give it a moment to render
+                await new Promise((resolve) => setTimeout(resolve, 50));
+
+                // Debug: check if wrapper has content
+                console.log("TempWrapper HTML after append:", tempWrapper.innerHTML);
+                console.log("TempWrapper computed dimensions:", {
+                  offsetWidth: tempWrapper.offsetWidth,
+                  offsetHeight: tempWrapper.offsetHeight,
+                  clientWidth: tempWrapper.clientWidth,
+                  clientHeight: tempWrapper.clientHeight,
+                  computedWidth: window.getComputedStyle(tempWrapper).width,
+                  computedHeight: window.getComputedStyle(tempWrapper).height,
+                  computedOverflow: window.getComputedStyle(tempWrapper).overflow
+                });
+
+                // Render the wrapper with html2canvas
+                const foCanvas = await html2canvas(tempWrapper, {
+                  backgroundColor: null,
+                  scale: scale,
+                  logging: false,
+                  useCORS: true,
+                  allowTaint: true,
+                });
+
+                // Composite it onto the main canvas at the actual rendered position and size
+                ctx.drawImage(
+                  foCanvas,
+                  relativeX * scale,
+                  relativeY * scale,
+                  actualWidth * scale,
+                  actualHeight * scale,
+                );
+
+                // Clean up
+                document.body.removeChild(tempWrapper);
+              }
+
+          // Convert composite canvas to blob
+          const compositeBlob = await new Promise((resolve) => {
+            compositeCanvas.toBlob(resolve, "image/png");
+          });
+
+          const slideNumber = String(i + 1).padStart(3, "0");
+          zip.file(`slide-${slideNumber}.png`, compositeBlob);
+          console.log(`Slide ${i + 1} exported with foreignObject composition`);
+        } else {
+          // No foreignObjects - use fast SVG approach
+          const canvas = await renderDiagramToCanvas();
+          const blob = await new Promise((resolve, reject) => {
+            canvas.toBlob((b) => {
+              if (b) resolve(b);
+              else reject(new Error("toBlob returned null"));
+            }, "image/png");
+          });
+
+          const slideNumber = String(i + 1).padStart(3, "0");
+          zip.file(`slide-${slideNumber}.png`, blob);
+        }
       } catch (error) {
         console.error(`Failed to export slide ${i + 1}:`, error);
+        // Skip this slide
       }
     }
 

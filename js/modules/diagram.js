@@ -267,7 +267,7 @@ function updateDiagramFromSlide() {
   // If current slide has no view, search backwards for the most recent view
   if (!viewTransform && currentSlideIndex > 0) {
     for (let i = currentSlideIndex - 1; i >= 0; i--) {
-      const prevSlide = cumulativeSlides[i];
+      const prevSlide = allSlides[i];
       if (prevSlide?.viewTransform) {
         viewTransform = prevSlide.viewTransform;
         break;
